@@ -25,7 +25,12 @@ logger = logging.getLogger("main_bot")
 
 SRC_FOLDER = pathlib.Path(__file__).parent.absolute()
 config = configparser.ConfigParser()
-config.read(os.path.join(SRC_FOLDER, 'config.ini'))
+
+if os.environ.ge("PPB_ENV") == "prod":
+    config.read(os.path.join(SRC_FOLDER, 'config_prod.ini'))
+else:
+    config.read(os.path.join(SRC_FOLDER, 'config.ini'))
+
 
 CACHE_FILEPATH = os.path.join(SRC_FOLDER, config["PATH"].get("CACHE_FILENAME"))
 ADMINS = set([int(admin_id) for key, admin_id in config.items("ADMINS")])
@@ -524,6 +529,8 @@ class FacadeBot:
         )
 
 def main():
+
+    logger.info(f"Booting up using {os.environ.get("PPB_ENV")} version")
 
     SearchConfigs.init_data()
 
