@@ -3,6 +3,7 @@ import configparser
 import pathlib
 import os
 import logging
+import sys
 import json
 import traceback
 import re
@@ -11,6 +12,7 @@ from fuzzywuzzy import fuzz
 from collections import namedtuple, defaultdict
 from functools import lru_cache, wraps
 from unidecode import unidecode
+from threading import Thread
 
 from telegram import ChatAction, ParseMode, Update
 from telegram.ext import (CommandHandler, Defaults, Filters, MessageHandler,
@@ -33,7 +35,7 @@ else:
 
 
 CACHE_FILEPATH = os.path.join(SRC_FOLDER, config["PATH"].get("CACHE_FILENAME"))
-ADMINS = set([int(admin_id) for key, admin_id in config.items("ADMINS")])
+LIST_OF_ADMINS = set([int(admin_id) for key, admin_id in config.items("ADMINS")])
 
 #TODO: sistemare about, start, help, i comandi da mandare a fatherbot, il wot
 
@@ -76,6 +78,16 @@ def send_typing_action(func):
 
     return command_func
 
+def restricted(func):
+    @wraps(func)
+    def wrapped(update, context, *args, **kwargs):
+        user_id = update.effective_user.id
+        if user_id not in LIST_OF_ADMINS:
+            print(f"Unauthorized access denied for {user_id}")
+            return
+        return func(update, context, *args, **kwargs)
+
+    return wrapped
 
 class EpisodeTopic:
 
@@ -393,6 +405,7 @@ class UserConfig:
 
 class SearchConfigs:
 
+    DATE_FORMAT = "%Y%m%dT%H%M%S"
     user_data = defaultdict(lambda: UserConfig(5, 1))
 
     @classmethod
@@ -434,13 +447,21 @@ class SearchConfigs:
         return data
 
     @classmethod
-    def dump_data(cls):
+    def dump_data(cls, is_back_up=False):
+        filename = f"backup{datetime.strftime(datetime.now(), cls.DATE_FORMAT)}.json" if is_back_up else config['PATH'].get('USERS_CFG_FILENAME')
+        filepath = os.path.join(SRC_FOLDER, filename)
         try:
-            with open(os.path.join(SRC_FOLDER, config['PATH'].get('USERS_CFG_FILENAME')), 'w') as f:
+            with open(filepath, 'w') as f:
                 json.dump(cls.normalize_user_data(), f)
+                return 1
         except Exception as e:
             logger.error(e)
             traceback.print_exc()
+            return 0
+
+    @classmethod
+    def backup_job(cls, context):
+        cls.dump_data(is_back_up=context.job.context)
 
     @classmethod
     def init_data(cls):
@@ -528,6 +549,13 @@ class FacadeBot:
             first = 0
         )
 
+        self.job = job_queue.run_repeating(
+            callback=SearchConfigs.backup_job,
+            interval = 15 * 60,
+            first = 0,
+            context=True
+        )
+
         # TODO: fare un job che dumpi periodicamente (ogni 15 min?) le cfg utente
         # TODO: manda info ad admin quando si boota (e quando si spegne e docca?)
         # TODO: counter delle stringhe ricercate?
@@ -547,6 +575,7 @@ class FacadeBot:
             "`/s <testo>`\nper ricercare un argomento tra quelli elencati negli scontrini delle puntate.\n\n`/top <n>`\nper far apparire solo i primi n messaggi nella ricerca\n\n`/min <n>`\nper modificare la soglia minima di match score dei risultati.",
             parse_mode=ParseMode.MARKDOWN
         )
+
 
 
 def main():
@@ -588,6 +617,44 @@ def main():
     dp.add_error_handler(error_callback)
 
     facade_bot.setup_scheduler_check_new_eps(dp.job_queue)
+
+    def stop_and_restart():
+        logger.info("Stop and restaring bot...")
+        updater.stop()
+        os.execl(sys.executable, sys.executable, *sys.argv)
+
+    def kill_bot():
+        logger.info("Shutting down bot...")
+        updater.stop()
+
+    @restricted
+    def restart(update, context):
+        res_save = SearchConfigs.dump_data()
+        if res_save:  # save success
+            update.message.reply_text("Data saved successfully")
+        else:
+            update.message.reply_text("Something went wrong saving data...")
+
+        update.message.reply_text("Bot is restarting...")
+        Thread(target=stop_and_restart).start()
+
+    @restricted
+    def kill(update, context):
+        res_save = SearchConfigs.dump_data()
+        if res_save:  # save success
+            update.message.reply_text("Data saved successfully")
+        else:
+            update.message.reply_text("Something went wrong saving data...")
+        update.message.reply_text("See you, space cowboy...")
+        Thread(target=kill_bot).start()
+
+    # handler restarter
+    dp.add_handler(
+        CommandHandler("restart", restart, filters=Filters.user(username="@itsaprankbro"))
+    )
+    dp.add_handler(
+        CommandHandler("killme", kill, filters=Filters.user(username="@itsaprankbro"))
+    )
 
     updater.start_polling()
 
