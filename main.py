@@ -274,7 +274,7 @@ class EpisodeHandler:
         
     def search_text_in_episodes(self, text, n, m, show_tech=False):
         sorted_tuple_episodes = SearchEngine.get_episodes_topic(self.show.episodes, text)
-        filter_episodes = [tpl for tpl in sorted_tuple_episodes if tpl[2] >= m][:n]
+        filter_episodes = [tpl for tpl in sorted_tuple_episodes if tpl[2] > m][:n]
         
         if len(filter_episodes):
             return self.format_response(filter_episodes, show_tech)
@@ -394,7 +394,7 @@ class UserConfig:
 
 class SearchConfigs:
 
-    user_data = defaultdict(lambda: UserConfig(5, 0))
+    user_data = defaultdict(lambda: UserConfig(5, 1))
 
     @classmethod
     def get_user_cfg(cls, chat_id):
@@ -482,7 +482,7 @@ class FacadeBot:
 
     def set_minimum_score(self, update, context):
         chat_id = update.effective_message.chat_id
-        value = self.sanitize_digit(context.args, 0, 100)
+        value = self.sanitize_digit(context.args, 1, 100)
         
         if value != -1:
             SearchConfigs.set_user_cfg(chat_id, value, 'm')
@@ -512,7 +512,7 @@ class FacadeBot:
 
     def start(self, update, context):
         update.effective_message.reply_text(
-            "Ciao! Sono un bot per ricercare argomenti trattati dal podcast di Sio, Lorro e Nick: Power Pizza!\n\nIl comando\n`\help`\nti mostrerà i comandi disponibili, oppure prova direttamente a inviare\n`\s Hollow Knight`\no qualsiasi altro argomento ti venga in mente.",
+            "Ciao! Sono un bot per ricercare argomenti trattati dal podcast di Sio, Lorro e Nick: Power Pizza!\n\nIl comando\n`/help`\nti mostrerà i comandi disponibili, oppure prova direttamente a inviare\n`/s Hollow Knight`\no qualsiasi altro argomento ti venga in mente.",
             parse_mode=ParseMode.MARKDOWN
         )
 
@@ -522,11 +522,6 @@ class FacadeBot:
             parse_mode=ParseMode.MARKDOWN
         )
 
-    def about(self, update, context):
-        update.effective_message.reply_text(
-            "Ciao! Sono un bot per ricercare argomenti trattati dal podcast di Sio, Lorro e Nick: Power Pizza!\n\nIl comando `\help` ti mostrerà i comandi disponibili, oppure prova direttamente a inviare `\s Hollow Knight` o qualsiasi altro argomento ti venga in mente.",
-            parse_mode=ParseMode.MARKDOWN
-        )
 
 def main():
 
@@ -557,7 +552,6 @@ def main():
 
     dp.add_handler(CommandHandler("start", facade_bot.start))
     dp.add_handler(CommandHandler("help", facade_bot.help))
-    dp.add_handler(CommandHandler("about", facade_bot.about))
 
     dp.add_error_handler(error_callback)
 
