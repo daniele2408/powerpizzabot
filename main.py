@@ -36,7 +36,6 @@ CACHE_FILEPATH = os.path.join(SRC_FOLDER, config["PATH"].get("CACHE_FILENAME"))
 ADMINS = set([int(admin_id) for key, admin_id in config.items("ADMINS")])
 
 #TODO: sistemare about, start, help, i comandi da mandare a fatherbot, il wot
-#TODO: un check al limite per il flood https://github.com/python-telegram-bot/python-telegram-bot/wiki/Avoiding-flood-limits#using-mq-with-queuedmessage-decorator
 
 class ValueOutOfRange(Exception):
     pass
@@ -409,6 +408,15 @@ class SearchConfigs:
         return cls.user_data[chat_id].m
 
     @classmethod
+    def check_if_same_value(cls, chat_id, value, field):
+        if field == 'n' and cls.user_data[chat_id].n == value:
+            return True
+        elif field == 'm' and cls.user_data[chat_id].m == value:
+            return True
+        else:
+            return False
+
+    @classmethod
     def set_user_cfg(cls, chat_id, value, field):
         if field == 'n':
             cls.user_data[chat_id].n = value
@@ -485,14 +493,24 @@ class FacadeBot:
         value = self.sanitize_digit(context.args, 1, 100)
         
         if value != -1:
+            is_same = SearchConfigs.check_if_same_value(chat_id, value, 'm')
+            if is_same:
+                update.effective_message.reply_text(f"La soglia minima di match score è già impostata su {value}")
+                return
+
             SearchConfigs.set_user_cfg(chat_id, value, 'm')
             update.effective_message.reply_text(f"Ho impostato {value}% come soglia minima di match score")
 
     def set_top_results(self, update, context):
+        
         chat_id = update.effective_message.chat_id
         value = self.sanitize_digit(context.args, 3, 10)
         
         if value != -1:
+            is_same = SearchConfigs.check_if_same_value(chat_id, value, 'n')
+            if is_same:
+                update.effective_message.reply_text(f"Il numero di risultati mostrati è già impostato su {value}")
+                return            
             SearchConfigs.set_user_cfg(chat_id, value, 'n')
             update.effective_message.reply_text(f"D'ora in poi ti mostrerò i primi {value} risultati della ricerca")
 
@@ -505,6 +523,9 @@ class FacadeBot:
         )
 
         # TODO: fare un job che dumpi periodicamente (ogni 15 min?) le cfg utente
+        # TODO: manda info ad admin quando si boota (e quando si spegne e docca?)
+        # TODO: counter delle stringhe ricercate?
+        # TODO: funzione print my config
 
 
     def dump_data(self, update, context):
