@@ -514,6 +514,12 @@ class FacadeBot:
             SearchConfigs.set_user_cfg(chat_id, value, 'n')
             update.effective_message.reply_text(f"D'ora in poi ti mostrerò i primi {value} risultati della ricerca")
 
+    def show_my_config(self, update, context):
+        chat_id = update.effective_message.chat_id
+
+        cfg_user = SearchConfigs.get_user_cfg(chat_id)
+        update.effective_message.reply_text(f"Top risultati: {cfg_user.n}\nSoglia minima: {cfg_user.m}%")
+
     def setup_scheduler_check_new_eps(self, job_queue):
 
         self.job = job_queue.run_repeating(
@@ -525,7 +531,6 @@ class FacadeBot:
         # TODO: fare un job che dumpi periodicamente (ogni 15 min?) le cfg utente
         # TODO: manda info ad admin quando si boota (e quando si spegne e docca?)
         # TODO: counter delle stringhe ricercate?
-        # TODO: funzione print my config
 
 
     def dump_data(self, update, context):
@@ -569,6 +574,7 @@ def main():
     dp.add_handler(CommandHandler("s", facade_bot.search))
     dp.add_handler(CommandHandler("min", facade_bot.set_minimum_score))
     dp.add_handler(CommandHandler("top", facade_bot.set_top_results))
+    dp.add_handler(CommandHandler("mycfg", facade_bot.show_my_config))
     dp.add_handler(CommandHandler("dump", facade_bot.dump_data, filters=Filters.user(username="@itsaprankbro")))
 
     dp.add_handler(CommandHandler("start", facade_bot.start))
