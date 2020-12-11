@@ -551,7 +551,9 @@ class FacadeBot:
 
 def main():
 
-    logger.info(f"Booting up using {os.environ.get('PPB_ENV')} version")
+    init_message_config = f"Booting up using {os.environ.get('PPB_ENV')} version"
+
+    logger.info(init_message_config)
 
     SearchConfigs.init_data()
 
@@ -564,6 +566,9 @@ def main():
     request = Request(con_pool_size=8)
     testbot = MQBot(TOKEN_BOT, request=request, mqueue=q)
     updater = extUpdater(bot=testbot, use_context=True)
+
+    for admin in LIST_OF_ADMINS:
+        updater.bot.send_message(chat_id=admin, text=init_message_config)
 
     episode_handler = EpisodeHandler(client, power_pizza)
     episode_handler.collect_episodes()
