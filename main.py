@@ -22,6 +22,8 @@ from telegram.ext import messagequeue as mq
 from telegram.utils.request import Request
 from telegram.bot import Bot   
 
+from TextRepo import TextRepo
+
 logging.basicConfig(format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO)
 logger = logging.getLogger("main_bot")
 
@@ -290,8 +292,7 @@ class EpisodeHandler:
         if len(filter_episodes):
             return self.format_response(filter_episodes, show_tech)
         else:
-            return f"Spiacente! Nessun match con le impostazioni correnti (minimo {m}% di matching score)"
-
+            return TextRepo.MSG_NO_RES.format(m)
 
     def format_response(self, first_eps_sorted, show_tech):
 
@@ -299,12 +300,17 @@ class EpisodeHandler:
         i = 1
         for tuple_ in first_eps_sorted:
             ep = self.show.get_episode(tuple_[0])
-            message += f"""
------------- MATCH #{i} -- SCORE {tuple_[2]}% ------------
-Topic: <a href="{tuple_[4]}">{tuple_[1].label}</a>
-{self.format_episode_title_line(ep.site_url, ep.title)}
-Data: {self.convert_to_italian_date_format(ep.published_at)}"""
-            message += f"\nTechnique: {tuple_[3]}\n" if show_tech else "\n"
+            score = tuple_[2]
+            topic_url = tuple_[4]
+            topic_label = tuple_[1].label
+            episode_line = self.format_episode_title_line(ep.site_url, ep.title)
+            date = self.convert_to_italian_date_format(ep.published_at)
+            message += TextRepo.MSG_RESPONSE.format(
+                i, score, topic_url, topic_label, episode_line, date
+            )
+            
+            technique_used = tuple_[3]
+            message += f"\nTechnique: {technique_used}\n" if show_tech else "\n"
             i += 1
 
         return message
@@ -395,7 +401,7 @@ def error_callback(update: Update, context: CallbackContext) -> None:
         traceback.print_exc()
 
 def handle_text_messages(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text("This is not a command! Send me /help to show the command list")
+    update.message.reply_text(TextRepo.MSG_NOT_A_CMD)
 
 class UserConfig:
 
@@ -486,7 +492,7 @@ class FacadeBot:
 
     @staticmethod
     def is_admin(chat_id):
-        return chat_id in ADMINS
+        return chat_id in LIST_OF_ADMINS
 
     @send_typing_action
     def search(self, update, context):
@@ -501,11 +507,11 @@ class FacadeBot:
     def sanitize_digit(args, min_, max_):
         res = re.compile('^[0-9]+$').match(" ".join(args))
         if res is None:
-            raise ValueNotValid("Il valore inviato non ha un formato corretto, inserire un numero intero appartenente all'intervallo previsto.")
+            raise ValueNotValid(TextRepo.MSG_NOT_VALID_INPUT)
         else:
             value = int(res.group(0))
             if min_ > value or max_ < value:
-                raise ValueOutOfRange(f"Il valore inviato non è nell'intervallo previsto [{min_},{max_}].")
+                raise ValueOutOfRange(TextRepo.MSG_NOT_VALID_RANGE.format(min_, max_))
             else:
                 return value
 
@@ -516,11 +522,11 @@ class FacadeBot:
         if value != -1:
             is_same = SearchConfigs.check_if_same_value(chat_id, value, 'm')
             if is_same:
-                update.effective_message.reply_text(f"La soglia minima di match score è già impostata su {value}")
+                update.effective_message.reply_text(TextRepo.MSG_SAME_VALUE.format(value))
                 return
 
             SearchConfigs.set_user_cfg(chat_id, value, 'm')
-            update.effective_message.reply_text(f"Ho impostato {value}% come soglia minima di match score")
+            update.effective_message.reply_text(TextRepo.MSG_SET_MIN_SCORE.format(value))
 
     def set_top_results(self, update, context):
         
@@ -530,16 +536,16 @@ class FacadeBot:
         if value != -1:
             is_same = SearchConfigs.check_if_same_value(chat_id, value, 'n')
             if is_same:
-                update.effective_message.reply_text(f"Il numero di risultati mostrati è già impostato su {value}")
+                update.effective_message.reply_text(TextRepo.MSG_SAME_VALUE.format(value))
                 return            
             SearchConfigs.set_user_cfg(chat_id, value, 'n')
-            update.effective_message.reply_text(f"D'ora in poi ti mostrerò i primi {value} risultati della ricerca")
+            update.effective_message.reply_text(TextRepo.MSG_SET_FIRST_N.format(value))
 
     def show_my_config(self, update, context):
         chat_id = update.effective_message.chat_id
 
         cfg_user = SearchConfigs.get_user_cfg(chat_id)
-        update.effective_message.reply_text(f"Top risultati: {cfg_user.n}\nSoglia minima: {cfg_user.m}%")
+        update.effective_message.reply_text(TextRepo.MSG_PRINT_CFG.format(cfg_user.n, cfg_user.m))
 
     def setup_scheduler_check_new_eps(self, job_queue):
 
@@ -556,8 +562,6 @@ class FacadeBot:
             context=True
         )
 
-        # TODO: fare un job che dumpi periodicamente (ogni 15 min?) le cfg utente
-        # TODO: manda info ad admin quando si boota (e quando si spegne e docca?)
         # TODO: counter delle stringhe ricercate?
 
 
@@ -566,13 +570,13 @@ class FacadeBot:
 
     def start(self, update, context):
         update.effective_message.reply_text(
-            "Ciao! Sono un bot per ricercare argomenti trattati dal podcast di Sio, Lorro e Nick: Power Pizza!\n\nIl comando\n`/help`\nti mostrerà i comandi disponibili, oppure prova direttamente a inviare\n`/s Hollow Knight`\no qualsiasi altro argomento ti venga in mente.",
+            TextRepo.MSG_START,
             parse_mode=ParseMode.MARKDOWN
         )
 
     def help(self, update, context):
         update.effective_message.reply_text(
-            "`/s <testo>`\nper ricercare un argomento tra quelli elencati negli scontrini delle puntate.\n\n`/top <n>`\nper far apparire solo i primi n messaggi nella ricerca\n\n`/min <n>`\nper modificare la soglia minima di match score dei risultati.",
+            TextRepo.MSG_START,
             parse_mode=ParseMode.MARKDOWN
         )
 
