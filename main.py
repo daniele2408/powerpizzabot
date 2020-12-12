@@ -191,16 +191,14 @@ class Show:
 
     # https://github.com/python/mypy/issues/1465
     @episodes.setter  # type: ignore
-    def set_episodes(self, episodes: List[Episode]) -> None:
-        for episode in episodes:
+    def set_episodes(self, episodes: Dict[str, Episode]) -> None:
+        # not a proper setter implementation, more like add, fix it
+        for episode in episodes.values():
             episode.populate_topics()
             self._episodes[episode.episode_id] = episode
 
     def get_episode(self, episode_id: str) -> Episode:
         return self._episodes[episode_id]
-
-    def add_episodes(self, episodes: List[Episode]) -> None:
-        self.set_episodes(episodes)
 
     def get_episode_ids(self) -> Set[str]:
         return set(self._episodes.keys())
@@ -230,11 +228,16 @@ def cache_decorator(func):
     return wrapper_cache_decorator
 
 
-def cache_updater(show: "Show"):
+def cache_updater(new_episodes: List[Dict]) -> None:
 
     try:
+        with open(CACHE_FILEPATH, "r") as cachefile:
+            data = json.load(cachefile)
+        for ep in new_episodes:
+            data.append(ep)
         with open(CACHE_FILEPATH, "w") as cachefile:
-            json.dump(show.episodes, cachefile)
+            json.dump(data, cachefile)
+            logger.info("Cache updated properly")
     except (IOError, ValueError):
         logger.error("Cache update failed.")
         traceback.print_exc()
@@ -310,30 +313,18 @@ class EpisodeHandler:
         self.client = client
         self.show = show
 
-    # @cache_decorator
-    # def get_episodes(self) -> List[Dict]:
-    #     episodes = self.client.get_show_episodes(self.show.show_id)
+    @cache_decorator
+    def get_episodes(self) -> List[Dict]:
+        return self.client.get_show_episodes(self.show.show_id)
 
-    #     procd_episodes = list()
-
-    #     for episode in episodes:
-    #         ep_id = episode["episode_id"]
-    #         episode["description"] = self.client.get_episode_info(ep_id)["response"][
-    #             "episode"
-    #         ]["description"]
-
-    #         procd_episodes.append(self.convert_raw_ep(episode))
-
-    #     return procd_episodes
 
     def collect_episodes(self) -> None:
-        episodes = self.client.get_show_episodes(self.show.show_id)
-
-        list_episodes = list()
+        episodes = self.get_episodes()
+        dict_episodes = dict()
         for ep in episodes:
-            list_episodes.append(self.convert_raw_ep(ep))
+            dict_episodes[ep['episode_id']] = self.convert_raw_ep(ep)
 
-        self.show.set_episodes = list_episodes
+        self.show.set_episodes = dict_episodes
 
     def convert_raw_ep(self, ep: Dict) -> Episode:
         ep_id = ep["episode_id"]
@@ -417,9 +408,11 @@ class EpisodeHandler:
                 n_last_episodes += 1
             else:  # we have all but the last one, we gucci
                 logger.info(f"Adding {n_last_episodes-1} new episodes!")
-                converted_eps = [self.convert_raw_ep(new_ep) for new_ep in last_episodes[:-1]]
-                self.show.add_episodes(converted_eps)
-                cache_updater(self.show)
+                new_episodes = last_episodes[:-1]
+                converted_eps = {new_ep['episode_id']:self.convert_raw_ep(new_ep) for new_ep in new_episodes}
+                self.show.set_episodes = converted_eps
+                cache_updater(new_episodes)
+                keep_checking = False
 
 
 class SearchEngine:
@@ -687,7 +680,7 @@ class FacadeBot:
         self.job = job_queue.run_repeating(
             callback=self.episode_handler.retrieve_new_episode,
             interval=60 * 60,
-            first=10,
+            first=30,
         )
 
         self.job = job_queue.run_repeating(
