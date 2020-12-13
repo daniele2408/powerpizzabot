@@ -1,37 +1,36 @@
-from requests import get
 import configparser
-import pathlib
-import os
-import logging
-import sys
 import json
-import traceback
+import logging
+import os
+import pathlib
 import re
+import sys
+import traceback
+from collections import Counter, defaultdict, namedtuple
 from datetime import datetime
-from fuzzywuzzy import fuzz
-from collections import namedtuple, defaultdict
 from functools import lru_cache, wraps
-from unidecode import unidecode
 from threading import Thread
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
+from fuzzywuzzy import fuzz
+from requests import get
 from telegram import ChatAction, ParseMode, Update
+from telegram.bot import Bot
 from telegram.ext import (
+    CallbackContext,
     CommandHandler,
     Defaults,
+    Dispatcher,
     Filters,
     MessageHandler,
     Updater,
-    Dispatcher,
-    CallbackContext,
 )
-from telegram.ext.updater import Updater as extUpdater
 from telegram.ext import messagequeue as mq
+from telegram.ext.updater import Updater as extUpdater
 from telegram.utils.request import Request
-from telegram.bot import Bot
+from unidecode import unidecode
 
 from TextRepo import TextRepo
-
-from typing import Callable, List, Dict, Set, Tuple, Union, Any
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -51,6 +50,7 @@ CACHE_FILEPATH: str = os.path.join(SRC_FOLDER, config["PATH"].get("CACHE_FILENAM
 LIST_OF_ADMINS: Set[int] = set(
     [int(admin_id) for key, admin_id in config.items("ADMINS")]
 )
+
 
 class ValueOutOfRange(Exception):
     pass
@@ -137,7 +137,9 @@ class EpisodeTopic:
         self.label = label
         self.url = url
 
+
 TopicSnippet = Tuple[str, EpisodeTopic, int, str, str]
+
 
 class Episode:
     def __init__(
@@ -248,9 +250,7 @@ class SpreakerAPIClient:
     GET_SHOW_URL: str = BASE_URL + config["URLS"].get("GET_SHOW")
 
     def __init__(self, token: str) -> None:
-        self.headers = {
-            "Authorization": f"Bearer {token}"
-        }
+        self.headers = {"Authorization": f"Bearer {token}"}
 
     def get_show(self, show_id: str) -> Any:
         result = get(SpreakerAPIClient.GET_SHOW_URL.format(show_id))
@@ -302,32 +302,70 @@ class SpreakerAPIClient:
         return response.json()
 
 
+class WordCounter:
+    filepath = os.path.join(SRC_FOLDER, config["PATH"].get("WORD_COUNT_FILENAME"))
+    instance = None
+    
+    
+    def __new__(cls,*args, **kwargs):
+        if cls.instance:
+            return cls.instance
+        else:
+            cls.instance = super().__new__(cls,*args, **kwargs)
+            return cls.instance        
+
+    def __init__(self) -> None:
+        with open(WordCounter.filepath, "r") as f:
+            data = json.load(f)
+            counter = Counter(data)
+        self.counter: Counter = counter
+
+    def add_word(self, word):
+        self.counter[word] += 1
+
+    def dump_counter(self):
+        # TODO: fai in modo che mergi e non sovrascrivi come fa ora
+        try:
+            logger.info("Saving word counter cache...")
+            with open(WordCounter.filepath, "w") as f:
+                json.dump(self.counter, f)
+                logger.info("Saved word counter successfully")
+                return 1
+        except Exception as e:
+            logger.info("Something went wrong saving word counter")
+            logger.error(e)
+            traceback.print_exc()
+            return 0
+
+
 class EpisodeHandler:
 
     # TODO: considera un singletone con __new__ e chiamarlo da dentro search()
 
-    def __init__(self, client: SpreakerAPIClient, show: Show) -> None:
+    def __init__(
+        self, client: SpreakerAPIClient, show: Show, word_counter: WordCounter
+    ) -> None:
         self.client = client
         self.show = show
+        self.word_counter = word_counter
 
     @cache_decorator
     def get_episodes(self) -> List[Dict]:
         return self.client.get_show_episodes(self.show.show_id)
 
-
     def collect_episodes(self) -> None:
         episodes = self.get_episodes()
         dict_episodes = dict()
         for ep in episodes:
-            dict_episodes[ep['episode_id']] = self.convert_raw_ep(ep)
+            dict_episodes[ep["episode_id"]] = self.convert_raw_ep(ep)
 
         self.show.set_episodes = dict_episodes
 
     def convert_raw_ep(self, ep: Dict) -> Episode:
         ep_id = ep["episode_id"]
-        ep["description"] = self.client.get_episode_info(ep_id)["response"][
-            "episode"
-        ]["description"]
+        ep["description"] = self.client.get_episode_info(ep_id)["response"]["episode"][
+            "description"
+        ]
         return Episode(
             ep["episode_id"],
             ep["title"],
@@ -349,9 +387,10 @@ class EpisodeHandler:
     def search_text_in_episodes(
         self, text: str, n: int, m: int, show_tech: bool = False
     ) -> str:
-        sorted_tuple_episodes = SearchEngine.get_episodes_topic(
+        sorted_tuple_episodes, normalized_text = SearchEngine.get_episodes_topic(
             self.show.episodes, text
         )
+        self.word_counter.add_word(normalized_text)
         filter_episodes = [tpl for tpl in sorted_tuple_episodes if tpl[2] > m][:n]
 
         if len(filter_episodes):
@@ -406,22 +445,32 @@ class EpisodeHandler:
             else:  # we have all but the last one, we gucci
                 logger.info(f"Adding {n_last_episodes-1} new episodes!")
                 new_episodes = last_episodes[:-1]
-                converted_eps = {new_ep['episode_id']:self.convert_raw_ep(new_ep) for new_ep in new_episodes}
+                converted_eps = {
+                    new_ep["episode_id"]: self.convert_raw_ep(new_ep)
+                    for new_ep in new_episodes
+                }
                 self.show.set_episodes = converted_eps
                 cache_updater(new_episodes)
                 keep_checking = False
+
+    def save_searches(self, *args):
+        self.word_counter.dump_counter()
 
 
 class SearchEngine:
     @classmethod
     def get_episodes_topic(
         cls, episodes: Dict[str, Episode], text: str
-    ) -> List[TopicSnippet]:
+    ) -> Tuple[List[TopicSnippet], str]:
         episodes_topic = list()
+        normalized_text = cls.normalize_string(text)
         for ep in episodes.values():
-            episodes_topic.extend(cls.scan_episode(ep, text))
+            episodes_topic.extend(cls.scan_episode(ep, normalized_text))
 
-        return sorted(episodes_topic, key=lambda x: (-x[2], len(x[1].label)))
+        return (
+            sorted(episodes_topic, key=lambda x: (-x[2], len(x[1].label))),
+            normalized_text,
+        )
 
     @staticmethod
     def normalize_string(s: str) -> str:
@@ -453,11 +502,11 @@ class SearchEngine:
             )  # penalty if measure < 80
 
     @classmethod
-    def scan_episode(cls, episode: Episode, text: str) -> List[TopicSnippet]:
+    def scan_episode(cls, episode: Episode, normalized_text: str) -> List[TopicSnippet]:
         ls_res = list()
         for topic in episode.topics:
             match_score, technique = cls.compare_strings(
-                cls.normalize_string(topic.label), cls.normalize_string(text)
+                cls.normalize_string(topic.label), normalized_text
             )
             ls_res.append(
                 (episode.episode_id, topic, match_score, technique, topic.url)
@@ -580,10 +629,11 @@ class SearchConfigs:
 
 
 class FacadeBot:
-    def __init__(self, episode_handler: "EpisodeHandler") -> None:
+    def __init__(self, episode_handler: EpisodeHandler) -> None:
         self.episode_handler = episode_handler
         self.job = None
         self.job_dump_cfg = None
+        self.job_dump_wc = None
 
     @staticmethod
     def is_admin(chat_id: int) -> bool:
@@ -594,11 +644,11 @@ class FacadeBot:
         if not context.args:
             raise ArgumentListEmpty("No arguments sent.")
         if update.effective_message:
-            chat_id = update.effective_message.chat_id
+            chat_id: int = update.effective_message.chat_id
             text: List[str] = context.args
-            user_cfg = SearchConfigs.get_user_cfg(chat_id)
+            user_cfg: UserConfig = SearchConfigs.get_user_cfg(chat_id)
 
-            message = self.episode_handler.search_text_in_episodes(
+            message: str = self.episode_handler.search_text_in_episodes(
                 " ".join(text), user_cfg.n, user_cfg.m, self.is_admin(chat_id)
             )
             update.effective_message.reply_text(
@@ -672,7 +722,7 @@ class FacadeBot:
         else:
             raise UpdateEffectiveMsgNotFound("update.effective_message None for /mycfg")
 
-    def setup_scheduler_check_new_eps(self, job_queue):
+    def schedule_jobs(self, job_queue):
 
         self.job = job_queue.run_repeating(
             callback=self.episode_handler.retrieve_new_episode,
@@ -680,15 +730,22 @@ class FacadeBot:
             first=30,
         )
 
-        self.job = job_queue.run_repeating(
+        self.job_dump_cfg = job_queue.run_repeating(
             callback=SearchConfigs.backup_job,
             interval=60 * 60 * 6,
             first=0,
             context=True,
         )
 
-        # TODO: counter delle stringhe ricercate?
-        # TODO: cupheade dà 38%, fixare la penalità
+        self.job_dump_wc = job_queue.run_repeating(
+            callback=self.episode_handler.save_searches,
+            interval=60 * 60,
+            first=60
+        )
+
+        # TODO: scrivi log su file
+        # TODO: scrivi unit test
+
     def dump_data(self, update: Update, context: CallbackContext) -> None:
         SearchConfigs.dump_data()
 
@@ -707,6 +764,31 @@ class FacadeBot:
             )
         else:
             raise UpdateEffectiveMsgNotFound("update.effective_message None for /help")
+
+
+def cache_counter_decorator(cls):
+    @wraps(cls)
+    def wrapper_cache_counter_decorator():
+        # Do something before
+        try:
+            with open(CACHE_COUNTER_FILEPATH, "r") as cachefile:
+                cache = json.load(cachefile)
+            logger.info("Cache HIT")
+            instance = cls(cache)
+        except (IOError, ValueError):
+            logger.info("Cache MISS")
+            traceback.print_exc()
+            instance = cls()
+
+        # Do something after
+
+        if not os.path.exists(CACHE_FILEPATH):
+            with open(CACHE_FILEPATH, "w") as cachefile:
+                json.dump(instance.counter, cachefile)
+
+        return instance
+
+    return wrapper_cache_decorator
 
 
 def main():
@@ -730,7 +812,7 @@ def main():
     for admin in LIST_OF_ADMINS:
         updater.bot.send_message(chat_id=admin, text=init_message_config)
 
-    episode_handler = EpisodeHandler(client, power_pizza)
+    episode_handler = EpisodeHandler(client, power_pizza, WordCounter())
     episode_handler.collect_episodes()
 
     facade_bot = FacadeBot(episode_handler)
@@ -751,10 +833,10 @@ def main():
 
     dp.add_error_handler(error_callback)
 
-    facade_bot.setup_scheduler_check_new_eps(dp.job_queue)
+    facade_bot.schedule_jobs(dp.job_queue)
 
     def stop_and_restart():
-        logger.info("Stop and restaring bot...")
+        logger.info("Stop and restarting bot...")
         updater.stop()
         os.execl(sys.executable, sys.executable, *sys.argv)
 
