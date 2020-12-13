@@ -50,7 +50,7 @@ CACHE_FILEPATH: str = os.path.join(SRC_FOLDER, config["PATH"].get("CACHE_FILENAM
 LIST_OF_ADMINS: Set[int] = set(
     [int(admin_id) for key, admin_id in config.items("ADMINS")]
 )
-
+MINIMUM_SCORE = 50
 
 class ValueOutOfRange(Exception):
     pass
@@ -510,6 +510,7 @@ class SearchEngine:
 
     @classmethod
     def compare_strings(cls, descr: str, text_input: str) -> Tuple[int, str]:
+        # TODO: /s dark soul prende prima Dark Crystal e poi "5 ORE DI DARK SOULS", non va bene
         token_set = (fuzz.token_set_ratio(descr, text_input), "token_set")
         token_sort = (fuzz.token_sort_ratio(descr, text_input), "token_sort")
         if len(text_input.split(" ")) == 1:
@@ -520,15 +521,16 @@ class SearchEngine:
         else:
             max_partial = (0, "max_simple_ratio")
 
-        best_result = max((token_set, token_sort, max_partial), key=lambda x: x[0])
+        return max((token_set, token_sort, max_partial), key=lambda x: x[0])
 
-        if best_result[0] >= 80:
-            return best_result
-        else:
-            return (
-                round(best_result[0] * 0.5),
-                best_result[1],
-            )  # penalty if measure < 80
+        # # da ponderare
+        # if best_result[0] >= 80:
+        #     return best_result
+        # else:
+        #     return (
+        #         round(best_result[0] * 0.5),
+        #         best_result[1],
+        #     )  # penalty if measure < 80
 
     @classmethod
     def scan_episode(cls, episode: Episode, normalized_text: str) -> List[TopicSnippet]:
@@ -678,7 +680,7 @@ class FacadeBot:
             user_cfg: UserConfig = SearchConfigs.get_user_cfg(chat_id)
 
             message: str = self.episode_handler.search_text_in_episodes(
-                " ".join(text), user_cfg.n, user_cfg.m, self.is_admin(chat_id)
+                " ".join(text), user_cfg.n, MINIMUM_SCORE, self.is_admin(chat_id)
             )
             update.effective_message.reply_text(
                 message, parse_mode=ParseMode.HTML, disable_web_page_preview=True
@@ -848,9 +850,9 @@ def main():
 
     dp = updater.dispatcher
     dp.add_handler(CommandHandler("s", facade_bot.search))
-    dp.add_handler(CommandHandler("min", facade_bot.set_minimum_score))
+    # dp.add_handler(CommandHandler("min", facade_bot.set_minimum_score))  # hidden for now
     dp.add_handler(CommandHandler("top", facade_bot.set_top_results))
-    dp.add_handler(CommandHandler("mycfg", facade_bot.show_my_config))
+    # dp.add_handler(CommandHandler("mycfg", facade_bot.show_my_config))  # hidden for now
     dp.add_handler(
         CommandHandler(
             "dump", facade_bot.dump_data, filters=Filters.user(username="@itsaprankbro")
