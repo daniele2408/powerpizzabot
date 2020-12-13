@@ -3,7 +3,7 @@ class TextRepo:
     MSG_NO_RES = "Spiacente! Nessun match con le impostazioni correnti (minimo {}% di matching score)."
 
     MSG_RESPONSE = """
------------- MATCH #{} -- SCORE {}% ------------
+---------------- MATCH #{} --{}--------------
 Topic: <a href="{}">{}</a>
 {}
 Data: {}
@@ -25,7 +25,7 @@ Data: {}
     MSG_START = """
 "Ciao! Sono un bot per ricercare argomenti trattati dal podcast di Sio, Lorro e Nick: Power Pizza!
 
-Il comando `/help` ti mostrerà i comandi disponibili, oppure prova direttamente a inviare
+Il comando `/help` ti mostrerà i comandi disponibili, altrimenti prova direttamente a inviare
 `/s Hollow Knight`
 oppure qualsiasi altro argomento ti venga in mente.
     """
@@ -33,5 +33,6 @@ oppure qualsiasi altro argomento ti venga in mente.
     MSG_HELP = """
  `/s <testo>`\nper ricercare un argomento tra quelli elencati negli scontrini delle puntate.\n
  `/top <n>`\nper far apparire solo i primi n messaggi nella ricerca.\n
- `/min <n>`\nper modificare la soglia minima di match score dei risultati.\m
+ `/min <n>`\nper modificare la soglia minima di match score dei risultati.\n
+ '/mycfg'\nper visualizzare le attuali impostazioni.\n
     """
