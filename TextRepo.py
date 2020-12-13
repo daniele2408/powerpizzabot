@@ -23,7 +23,7 @@ Data: {}
     MSG_PRINT_CFG = "Top risultati: {}\nSoglia minima: {}%"
 
     MSG_START = """
-"Ciao! Sono un bot per ricercare argomenti trattati dal podcast di Sio, Lorro e Nick: Power Pizza!
+Ciao! Sono un bot per ricercare argomenti trattati dal podcast di Sio, Lorro e Nick: Power Pizza!
 
 Il comando `/help` ti mostrerà i comandi disponibili, altrimenti prova direttamente a inviare
 `/s Hollow Knight`

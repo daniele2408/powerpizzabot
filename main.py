@@ -511,6 +511,7 @@ class SearchEngine:
     @classmethod
     def compare_strings(cls, descr: str, text_input: str) -> Tuple[int, str]:
         # TODO: /s dark soul prende prima Dark Crystal e poi "5 ORE DI DARK SOULS", non va bene
+        # same: DLC di cuphead dà prima Cuphead e poi "DLC di Cuphead rimandato al 2021 because qualità"
         token_set = (fuzz.token_set_ratio(descr, text_input), "token_set")
         token_sort = (fuzz.token_sort_ratio(descr, text_input), "token_sort")
         if len(text_input.split(" ")) == 1:
@@ -776,6 +777,7 @@ class FacadeBot:
 
         # TODO: scrivi log su file
         # TODO: scrivi unit test
+        # TODO: fai job per cancellare backup più vecchi
 
     def dump_data(self, update: Update, context: CallbackContext) -> None:
         SearchConfigs.dump_data()
