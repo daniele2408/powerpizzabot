@@ -52,9 +52,6 @@ LIST_OF_ADMINS: Set[int] = set(
     [int(admin_id) for key, admin_id in config.items("ADMINS")]
 )
 
-# TODO: sistemare about, start, help, i comandi da mandare a fatherbot, il wot
-
-
 class ValueOutOfRange(Exception):
     pass
 
@@ -253,7 +250,7 @@ class SpreakerAPIClient:
     def __init__(self, token: str) -> None:
         self.headers = {
             "Authorization": f"Bearer {token}"
-        }  # TODO: ma questo lo stiamo ad usare o no??
+        }
 
     def get_show(self, show_id: str) -> Any:
         result = get(SpreakerAPIClient.GET_SHOW_URL.format(show_id))
@@ -363,14 +360,14 @@ class EpisodeHandler:
             return TextRepo.MSG_NO_RES.format(m)
 
     def format_response(
-        self, first_eps_sorted: List[TopicSnippet], show_tech: bool
+        self, first_eps_sorted: List[TopicSnippet], admin_req: bool
     ) -> str:
 
         message = ""
         i = 1
         for tuple_ in first_eps_sorted:
             ep = self.show.get_episode(tuple_[0])
-            score = tuple_[2]
+            score = f"SCORE {tuple_[2]}" if admin_req else ""
             topic_url = tuple_[4]
             topic_label = tuple_[1].label
             episode_line = self.format_episode_title_line(ep.site_url, ep.title)
@@ -380,7 +377,7 @@ class EpisodeHandler:
             )
 
             technique_used = tuple_[3]
-            message += f"\nTechnique: {technique_used}\n" if show_tech else "\n"
+            message += f"\nTechnique: {technique_used}\n" if admin_req else "\n"
             i += 1
 
         return message
@@ -447,13 +444,13 @@ class SearchEngine:
 
         best_result = max((token_set, token_sort, max_partial), key=lambda x: x[0])
 
-        if text_input in descr:
+        if best_result[0] >= 80:
             return best_result
         else:
             return (
                 round(best_result[0] * 0.5),
                 best_result[1],
-            )  # penalty if no substring
+            )  # penalty if measure < 80
 
     @classmethod
     def scan_episode(cls, episode: Episode, text: str) -> List[TopicSnippet]:
@@ -691,7 +688,7 @@ class FacadeBot:
         )
 
         # TODO: counter delle stringhe ricercate?
-
+        # TODO: cupheade dà 38%, fixare la penalità
     def dump_data(self, update: Update, context: CallbackContext) -> None:
         SearchConfigs.dump_data()
 
