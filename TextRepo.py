@@ -16,7 +16,7 @@ Data: {}
     MSG_NOT_VALID_INPUT = "Il valore inviato non ha un formato corretto, inserire un numero intero appartenente all'intervallo previsto."
     MSG_NOT_VALID_RANGE = "Il valore inviato non è nell'intervallo previsto [{},{}]."
 
-    MSG_SAME_VALUE = "La soglia minima di match score è già impostata su {}."
+    MSG_SAME_VALUE = "Il numero di risultati mostrati è già pari a {}."
     MSG_SET_MIN_SCORE = "Ho impostato {}% come soglia minima di match score."
     MSG_SET_FIRST_N = "D'ora in poi ti mostrerò i primi {} risultati della ricerca."
 
@@ -33,6 +33,4 @@ oppure qualsiasi altro argomento ti venga in mente.
     MSG_HELP = """
  `/s <testo>`\nper ricercare un argomento tra quelli elencati negli scontrini delle puntate.\n
  `/top <n>`\nper far apparire solo i primi n messaggi nella ricerca.\n
- `/min <n>`\nper modificare la soglia minima di match score dei risultati.\n
- '/mycfg'\nper visualizzare le attuali impostazioni.\n
     """
