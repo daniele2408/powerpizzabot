@@ -157,6 +157,30 @@ class Episode:
         self.description_raw = description_raw
         self.topics: List[EpisodeTopic] = []
 
+    def to_dict(self) -> Dict[str, Union[str, List[Dict[str, str]]]]:
+        return {
+            "episode_id": self.episode_id,
+            "title": self.title,
+            "published_at": self.published_at,
+            "site_url": self.site_url,
+            "description_raw": self.description_raw,
+            "topics": [
+                {"label":topic.label, "url":topic.url} for topic in self.topics
+            ]
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict):
+        new_instance = cls(
+            data["episode_id"],
+            data["title"],
+            data["published_at"],
+            data["site_url"],
+            data["description_raw"],
+        )
+        new_instance.topics = [EpisodeTopic(topic["label"], topic["url"]) for topic in data["topics"]]
+        return new_instance
+
     def populate_topics(self) -> None:
         ls_tuples_label_url = re.findall(
             "((\\n|\\r\\n).+(\\n|\\r\\n)http(|s).+(\\n|\\r\\n|$))", self.description_raw
@@ -193,53 +217,57 @@ class Show:
     def set_episodes(self, episodes: Dict[str, Episode]) -> None:
         # not a proper setter implementation, more like add, fix it
         for episode in episodes.values():
-            episode.populate_topics()
             self._episodes[episode.episode_id] = episode
 
     def get_episode(self, episode_id: str) -> Episode:
         return self._episodes[episode_id]
 
     def get_episode_ids(self) -> Set[str]:
-        return set(self._episodes.keys())
+        return set(self._episodes.keys()) -set([42413933])
+
+class Cacher:
+
+    @classmethod
+    def cache_decorator(cls, func):
+        @wraps(func)
+        def wrapper_cache_decorator(*args, **kwargs):
+            try:
+                with open(CACHE_FILEPATH, "r") as cachefile:
+                    cache = json.load(cachefile)
+                cache = {cache_ep_data["episode_id"]:Episode.from_dict(cache_ep_data) for cache_ep_data in cache}
+                logger.info("Cache HIT")
+            except (IOError, ValueError):
+                logger.info("Cache MISS")
+                traceback.print_exc()
+                cache = func(*args, **kwargs)
+
+            if not os.path.exists(CACHE_FILEPATH):
+                with open(CACHE_FILEPATH, "w") as cachefile:
+                    json.dump(cls.marshal_episodes_list(cache), cachefile)
+
+            return cache
+
+        return wrapper_cache_decorator
+
+    @classmethod
+    def marshal_episodes_list(cls, episodes: Dict[str, Episode]) -> List[Dict]:
+        return [episode.to_dict() for episode in episodes.values()]
 
 
-def cache_decorator(func):
-    @wraps(func)
-    def wrapper_cache_decorator(*args, **kwargs):
-        # Do something before
+    @classmethod
+    def cache_updater(cls, new_episodes: List[Dict]) -> None:
+
         try:
             with open(CACHE_FILEPATH, "r") as cachefile:
-                cache = json.load(cachefile)
-            logger.info("Cache HIT")
-        except (IOError, ValueError):
-            logger.info("Cache MISS")
-            traceback.print_exc()
-            cache = func(*args, **kwargs)
-
-        # Do something after
-
-        if not os.path.exists(CACHE_FILEPATH):
+                data = json.load(cachefile)
+            for ep in cls.marshal_episodes_list(new_episodes):
+                data.append(ep)
             with open(CACHE_FILEPATH, "w") as cachefile:
-                json.dump(cache, cachefile)
-
-        return cache
-
-    return wrapper_cache_decorator
-
-
-def cache_updater(new_episodes: List[Dict]) -> None:
-
-    try:
-        with open(CACHE_FILEPATH, "r") as cachefile:
-            data = json.load(cachefile)
-        for ep in new_episodes:
-            data.append(ep)
-        with open(CACHE_FILEPATH, "w") as cachefile:
-            json.dump(data, cachefile)
-            logger.info("Cache updated properly")
-    except (IOError, ValueError):
-        logger.error("Cache update failed.")
-        traceback.print_exc()
+                json.dump(data, cachefile)
+                logger.info("Cache updated properly")
+        except (IOError, ValueError):
+            logger.error("Cache update failed.")
+            traceback.print_exc()
 
 
 class SpreakerAPIClient:
@@ -324,7 +352,6 @@ class WordCounter:
         self.counter[word] += 1
 
     def dump_counter(self):
-        # TODO: fai in modo che mergi e non sovrascrivi come fa ora
         try:
             logger.info("Saving word counter cache...")
             with open(WordCounter.filepath, "w") as f:
@@ -349,30 +376,31 @@ class EpisodeHandler:
         self.show = show
         self.word_counter = word_counter
 
-    @cache_decorator
-    def get_episodes(self) -> List[Dict]:
-        return self.client.get_show_episodes(self.show.show_id)
+    @Cacher.cache_decorator
+    def collect_episodes(self) -> Dict[str, Episode]:
+        episodes = self.client.get_show_episodes(self.show.show_id)
+        return self.process_raw_episodes(episodes)
 
-    def collect_episodes(self) -> None:
-        episodes = self.get_episodes()
-        dict_episodes = dict()
-        for ep in episodes:
-            dict_episodes[ep["episode_id"]] = self.convert_raw_ep(ep)
+    def add_episodes_to_show(self) -> None:
+        self.show.set_episodes = self.collect_episodes()
 
-        self.show.set_episodes = dict_episodes
+    def process_raw_episodes(self, raw_episodes) -> Dict[str, Episode]:
+        return {ep["episode_id"]: self.convert_raw_ep(ep) for ep in raw_episodes}
 
     def convert_raw_ep(self, ep: Dict) -> Episode:
         ep_id = ep["episode_id"]
         ep["description"] = self.client.get_episode_info(ep_id)["response"]["episode"][
             "description"
         ]
-        return Episode(
+        episode = Episode(
             ep["episode_id"],
             ep["title"],
             ep["published_at"],
             ep["site_url"],
             ep["description"],
         )
+        episode.populate_topics()
+        return episode
 
     @staticmethod
     def convert_to_italian_date_format(date_str: str) -> str:
@@ -445,12 +473,13 @@ class EpisodeHandler:
             else:  # we have all but the last one, we gucci
                 logger.info(f"Adding {n_last_episodes-1} new episodes!")
                 new_episodes = last_episodes[:-1]
-                converted_eps = {
-                    new_ep["episode_id"]: self.convert_raw_ep(new_ep)
-                    for new_ep in new_episodes
-                }
-                self.show.set_episodes = converted_eps
-                cache_updater(new_episodes)
+                # converted_eps = {
+                #     new_ep["episode_id"]: self.convert_raw_ep(new_ep)
+                #     for new_ep in new_episodes
+                # }
+                procd_episodes = self.process_raw_episodes(new_episodes)
+                self.show.set_episodes = procd_episodes
+                Cacher.cache_updater(procd_episodes)
                 keep_checking = False
 
     def save_searches(self, *args):
@@ -554,7 +583,7 @@ class SearchConfigs:
     user_data: Dict[int, UserConfig] = defaultdict(lambda: UserConfig(5, 1))
 
     @classmethod
-    def get_user_cfg(cls, chat_id: int) -> "UserConfig":
+    def get_user_cfg(cls, chat_id: int) -> UserConfig:
         return cls.user_data[chat_id]
 
     @classmethod
@@ -727,20 +756,20 @@ class FacadeBot:
         self.job = job_queue.run_repeating(
             callback=self.episode_handler.retrieve_new_episode,
             interval=60 * 60,
-            first=30,
+            first=60,
         )
 
         self.job_dump_cfg = job_queue.run_repeating(
             callback=SearchConfigs.backup_job,
             interval=60 * 60 * 6,
-            first=0,
+            first=30,
             context=True,
         )
 
         self.job_dump_wc = job_queue.run_repeating(
             callback=self.episode_handler.save_searches,
             interval=60 * 60,
-            first=60
+            first=90
         )
 
         # TODO: scrivi log su file
@@ -813,7 +842,7 @@ def main():
         updater.bot.send_message(chat_id=admin, text=init_message_config)
 
     episode_handler = EpisodeHandler(client, power_pizza, WordCounter())
-    episode_handler.collect_episodes()
+    episode_handler.add_episodes_to_show()
 
     facade_bot = FacadeBot(episode_handler)
 
