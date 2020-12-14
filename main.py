@@ -230,7 +230,7 @@ class Show:
         return self._episodes[episode_id]
 
     def get_episode_ids(self) -> Set[str]:
-        return set(self._episodes.keys()) -set([42413933])
+        return set(self._episodes.keys())
 
 class Cacher:
 
@@ -783,10 +783,10 @@ class FacadeBot:
             first=90
         )
 
-        # TODO: scrivi log su file
         # TODO: scrivi unit test
         # TODO: fai job per cancellare backup più vecchi
         # TODO: fai comando per triggerare dump
+        # TODO: trova best practice per fare un finally wrap tutto che sia sensato
 
     def dump_data(self, update: Update, context: CallbackContext) -> None:
         SearchConfigs.dump_data()
