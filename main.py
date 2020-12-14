@@ -786,7 +786,7 @@ class FacadeBot:
         # TODO: scrivi unit test
         # TODO: fai job per cancellare backup più vecchi
         # TODO: fai comando per triggerare dump
-        # TODO: trova best practice per fare un finally wrap tutto che sia sensato
+        # TODO: fai atexit dump il dumpabile
 
     def dump_data(self, update: Update, context: CallbackContext) -> None:
         SearchConfigs.dump_data()
