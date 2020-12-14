@@ -262,7 +262,7 @@ class Cacher:
 
 
     @classmethod
-    def cache_updater(cls, new_episodes: List[Dict]) -> None:
+    def cache_updater(cls, new_episodes: Dict[str, Episode]) -> None:
 
         try:
             with open(CACHE_FILEPATH, "r") as cachefile:
@@ -352,7 +352,7 @@ class WordCounter:
     def __init__(self) -> None:
         with open(WordCounter.filepath, "r") as f:
             data = json.load(f)
-            counter = Counter(data)
+            counter: Counter = Counter(data)
         self.counter: Counter = counter
 
     def add_word(self, word):
