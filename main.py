@@ -32,11 +32,6 @@ from unidecode import unidecode
 
 from TextRepo import TextRepo
 
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
-)
-logger = logging.getLogger("main_bot")
-
 SRC_FOLDER = pathlib.Path(__file__).parent.absolute()
 config = configparser.ConfigParser()
 
@@ -45,6 +40,18 @@ if os.environ.get("PPB_ENV") == "prod":
 else:
     config.read(os.path.join(SRC_FOLDER, "config.ini"))
 
+
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+)
+logger = logging.getLogger("main_bot")
+LOG_FILENAME = config["PATH"].get("LOGGER_FILENAME")
+# Add the log message handler to the logger
+handler = logging.handlers.RotatingFileHandler(
+              LOG_FILENAME, maxBytes=100000, backupCount=5)
+handler.setFormatter(logging.Formatter("{asctime} - {name} - {levelname} - {message}", style='{'))
+
+logger.addHandler(handler)
 
 CACHE_FILEPATH: str = os.path.join(SRC_FOLDER, config["PATH"].get("CACHE_FILENAME"))
 LIST_OF_ADMINS: Set[int] = set(
@@ -512,6 +519,7 @@ class SearchEngine:
     def compare_strings(cls, descr: str, text_input: str) -> Tuple[int, str]:
         # TODO: /s dark soul prende prima Dark Crystal e poi "5 ORE DI DARK SOULS", non va bene
         # same: DLC di cuphead dà prima Cuphead e poi "DLC di Cuphead rimandato al 2021 because qualità"
+        # altra idea per i match: fare un filtro min in base allo score max, se è 100 allora falli vedere fino a 90(?), non mi serve scendere e vedere i 70, se è 80 allora posso far vedere anche gli altri ecc
         token_set = (fuzz.token_set_ratio(descr, text_input), "token_set")
         token_sort = (fuzz.token_sort_ratio(descr, text_input), "token_sort")
         if len(text_input.split(" ")) == 1:
@@ -778,6 +786,7 @@ class FacadeBot:
         # TODO: scrivi log su file
         # TODO: scrivi unit test
         # TODO: fai job per cancellare backup più vecchi
+        # TODO: fai comando per triggerare dump
 
     def dump_data(self, update: Update, context: CallbackContext) -> None:
         SearchConfigs.dump_data()
