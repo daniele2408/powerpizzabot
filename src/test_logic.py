@@ -107,12 +107,10 @@ class TestSearchEngine:
 
         ls_eps, normalized_text = SearchEngine.generate_sorted_topics(episodes, text)
 
-        print(ls_eps)
-
         assert len(ls_eps) == len(episode_procd.topics)
         assert ls_eps[0][1].label == 'A Babbo Morto - Zerocalcare'
-        assert max(ls_eps, key=lambda x: x[2]) == ls_eps[0][2]
-        assert min(ls_eps, key=lambda x: x[2]) == ls_eps[-1][2]
+        assert max(ls_eps, key=lambda x: x[2])[2] == ls_eps[0][2]
+        assert min(ls_eps, key=lambda x: x[2])[2] == ls_eps[-1][2]
 
 ############## EpisodeHandler ##############
 
