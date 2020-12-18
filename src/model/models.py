@@ -152,7 +152,7 @@ class SearchConfigs:
         filename = (
             f"backup{datetime.strftime(datetime.now(), cls.DATE_FORMAT)}.json"
             if is_back_up
-            else config["PATH"].get("USERS_CFG_FILENAME")
+            else config["PATH"].get("USERS_CFG_FILEPATH")
         )
         filepath = os.path.join(SRC_FOLDER, filename)
         try:
@@ -172,7 +172,7 @@ class SearchConfigs:
     def init_data(cls) -> None:
         try:
             with open(
-                os.path.join(SRC_FOLDER, config["PATH"].get("USERS_CFG_FILENAME")), "r"
+                os.path.join(SRC_FOLDER, config["PATH"].get("USERS_CFG_FILEPATH")), "r"
             ) as f:
                 data = json.load(f)
 

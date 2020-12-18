@@ -13,7 +13,7 @@ else:
 
 LOG_FILEPATH = os.path.join(SRC_FOLDER, config["PATH"].get("LOGGER_FILEPATH"))
 CACHE_FILEPATH: str = os.path.join(SRC_FOLDER, config["PATH"].get("CACHE_FILEPATH"))
-WORD_COUNTER_FILEPATH: str = os.path.join(SRC_FOLDER, 'storage', config["PATH"].get("WORD_COUNT_FILENAME"))
+WORD_COUNTER_FILEPATH: str = os.path.join(SRC_FOLDER, config["PATH"].get("WORD_COUNT_FILEPATH"))
 LIST_OF_ADMINS: Set[int] = set(
     [int(admin_id) for key, admin_id in config.items("ADMINS")]
 )
