@@ -21,7 +21,7 @@ TopicSnippet = Tuple[str, EpisodeTopic, int, str, str]
 
 class SearchEngine:
     @classmethod
-    def get_episodes_topic(
+    def generate_sorted_topics(
         cls, episodes: Dict[str, Episode], text: str
     ) -> Tuple[List[TopicSnippet], str]:
         episodes_topic = list()
@@ -100,7 +100,7 @@ class EpisodeHandler:
     def add_episodes_to_show(self) -> None:
         self.show.set_episodes = self.collect_episodes()
 
-    def process_raw_episodes(self, raw_episodes) -> Dict[str, Episode]:
+    def process_raw_episodes(self, raw_episodes: List[Dict]) -> Dict[str, Episode]:
         return {ep["episode_id"]: self.convert_raw_ep(ep) for ep in raw_episodes}
 
     def convert_raw_ep(self, ep: Dict) -> Episode:
@@ -124,6 +124,7 @@ class EpisodeHandler:
 
     @staticmethod
     def format_episode_title_line(site_url: str, title: str) -> str:
+        #TODO: assicurarsi che il pattern sia corretto a priori
         pre_colons, post_colons = title.split(":", 1)
         number_ep = re.findall("[0-9]+", pre_colons)
         return f"Episodio {number_ep[0]}: <a href='{site_url}'>{post_colons}</a>"
@@ -131,7 +132,7 @@ class EpisodeHandler:
     def search_text_in_episodes(
         self, text: str, n: int, m: int, show_tech: bool = False
     ) -> str:
-        sorted_tuple_episodes, normalized_text = SearchEngine.get_episodes_topic(
+        sorted_tuple_episodes, normalized_text = SearchEngine.generate_sorted_topics(
             self.show.episodes, text
         )
         self.word_counter.add_word(normalized_text)

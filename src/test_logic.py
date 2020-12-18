@@ -1,43 +1,46 @@
 import pytest
 from logic.logic import SearchEngine, EpisodeHandler
 from model.models import Episode, EpisodeTopic, Show
-from support.configuration import CACHE_FILEPATH
+from support.configuration import CACHE_FILEPATH, RAW_EP_FILEPATH, PROCD_EP_FILEPATH
 from support.apiclient import SpreakerAPIClient
 from support.WordCounter import WordCounter
 import json
 from unittest.mock import patch
 
-############## utils ##############
-
-def load_cache():
-    with open(CACHE_FILEPATH, 'r') as f:
-        data = json.load(f)
-
-    return data
 
 ############## fixtures ##############
 
 @pytest.fixture
-def mock_client():
-    with patch.object(SpreakerAPIClient, 'get_episode_info') as mock_method:
-        mock_method.return_value = 'pippo'
-        yield SpreakerAPIClient('bla')
+def raw_ep():
+    with open(RAW_EP_FILEPATH, 'r') as f:
+        raw_ep = json.load(f)
 
+    return raw_ep
+
+@pytest.fixture
+def mock_client(episode_procd: Episode):
+    with patch.object(SpreakerAPIClient, 'get_episode_info') as mock_method:
+        mock_method.return_value = {'response': {'episode': {'description': episode_procd.description_raw}}}
+        yield SpreakerAPIClient('testtoken')
 
 @pytest.fixture
 def episode_procd():
-    data = load_cache()
-    first_ep = [ep for ep in data if ep['episode_id']==42314321][0]
+    with open(PROCD_EP_FILEPATH, 'r') as f:
+        procd_ep = json.load(f)
     episode = Episode(
-        first_ep['episode_id'],
-        first_ep['title'],
-        first_ep['published_at'],
-        first_ep['site_url'],
-        first_ep['description_raw']
+        procd_ep['episode_id'],
+        procd_ep['title'],
+        procd_ep['published_at'],
+        procd_ep['site_url'],
+        procd_ep['description_raw']
     )
-    episode.topics = [EpisodeTopic(a['label'], a['url']) for a in first_ep['topics']]
+    episode.topics = [EpisodeTopic(a['label'], a['url']) for a in procd_ep['topics']]
 
     return episode
+
+@pytest.fixture
+def episode_handler(mock_client):
+    return EpisodeHandler(mock_client, Show('test_id'), WordCounter())
 
 ############## SearchEngine ##############
 
@@ -97,10 +100,54 @@ class TestSearchEngine:
 
         assert max(set_res, key=lambda x: x[1])[0] == "uccellox"
 
+    def test_generate_sorted_topics(self, episode_procd):
+
+        episodes = {'42314321': episode_procd}
+        text = 'babbo'
+
+        ls_eps, normalized_text = SearchEngine.generate_sorted_topics(episodes, text)
+
+        print(ls_eps)
+
+        assert len(ls_eps) == len(episode_procd.topics)
+        assert ls_eps[0][1].label == 'A Babbo Morto - Zerocalcare'
+        assert max(ls_eps, key=lambda x: x[2]) == ls_eps[0][2]
+        assert min(ls_eps, key=lambda x: x[2]) == ls_eps[-1][2]
+
+############## EpisodeHandler ##############
 
 class TestEpisodeHandler:
 
-    def test_prova(self, mock_client):
+    def test_convert_raw_ep(self, mock_client, episode_procd, raw_ep):
+
         episode_handler = EpisodeHandler(mock_client, Show('fdsafs'), WordCounter())
-        episode_handler.convert_raw_ep({'episode_id':'vlah'})
-        assert False
+        episode = episode_handler.convert_raw_ep(raw_ep)
+        
+        assert episode.title == episode_procd.title
+        assert episode.episode_id == episode_procd.episode_id
+        assert episode.published_at == episode_procd.published_at
+        assert episode.site_url == episode_procd.site_url
+        
+    def test_convert_date(self, episode_handler):
+
+        not_it_date = "2020-12-01 23:56:54"
+        it_date = "01/12/2020"
+
+        res = episode_handler.convert_to_italian_date_format(not_it_date)
+
+        assert it_date == res
+
+    def test_format_episode_line(self, episode_handler):
+
+        title_A = "120: Hard Chiacchiere feat. Kenobit"
+        title_B = "ep 120: Hard Chiacchiere feat. Kenobit"
+
+        url = "unurlacaso"
+
+        expected = "Episodio 120: <a href='unurlacaso'> Hard Chiacchiere feat. Kenobit</a>"
+
+        res_A = episode_handler.format_episode_title_line(url, title_A)
+        res_B = episode_handler.format_episode_title_line(url, title_B)
+
+        assert expected == res_A
+        assert expected == res_B
