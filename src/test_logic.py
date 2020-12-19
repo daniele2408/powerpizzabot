@@ -1,7 +1,7 @@
 import pytest
 from logic.logic import SearchEngine, EpisodeHandler
 from model.models import Episode, EpisodeTopic, Show
-from support.configuration import CACHE_FILEPATH, RAW_EP_FILEPATH, PROCD_EP_FILEPATH
+from support.configuration import CACHE_FILEPATH, RAW_EP_FILEPATH, PROCD_EP_FILEPATH, SNIPPET_TXT_FILEPATH
 from support.apiclient import SpreakerAPIClient
 from support.WordCounter import WordCounter
 import json
@@ -24,6 +24,12 @@ def mock_client(episode_procd: Episode):
         yield SpreakerAPIClient('testtoken')
 
 @pytest.fixture
+def mock_show(episode_procd: Episode):
+    with patch.object(Show, 'get_episode') as mock_show:
+        mock_show.return_value = episode_procd
+        yield Show('test_id')
+
+@pytest.fixture
 def episode_procd():
     with open(PROCD_EP_FILEPATH, 'r') as f:
         procd_ep = json.load(f)
@@ -39,8 +45,8 @@ def episode_procd():
     return episode
 
 @pytest.fixture
-def episode_handler(mock_client):
-    return EpisodeHandler(mock_client, Show('test_id'), WordCounter())
+def episode_handler(mock_client, mock_show):
+    return EpisodeHandler(mock_client, mock_show, WordCounter())
 
 ############## SearchEngine ##############
 
@@ -149,3 +155,21 @@ class TestEpisodeHandler:
 
         assert expected == res_A
         assert expected == res_B
+
+    def test_format_response(self, episode_procd, episode_handler):
+
+        episodes = {'42314321': episode_procd}
+        text = 'babbo'
+
+        ls_eps, normalized_text = SearchEngine.generate_sorted_topics(episodes, text)
+
+        msg = episode_handler.format_response(ls_eps, False)
+
+        with open(SNIPPET_TXT_FILEPATH, 'r') as f:
+            exp_msg = ''
+            for line in f.readlines():
+                exp_msg += line.strip('\n')
+
+        assert msg.replace('\n', '').strip() == exp_msg.strip()
+
+    #TODO: testa retrieve_new_episode, quindi mocka tutto dai cazzo
