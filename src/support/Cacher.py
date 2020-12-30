@@ -11,12 +11,18 @@ logger = logging.getLogger("support.Cacher")
 
 class Cacher:
 
+    CACHE_FILEPATH = CACHE_FILEPATH
+
+    @classmethod
+    def set_cache_folder(cls, new_folder):
+        cls.CACHE_FILEPATH = new_folder
+
     @classmethod
     def cache_decorator(cls, func):
         @wraps(func)
         def wrapper_cache_decorator(*args, **kwargs):
             try:
-                with open(CACHE_FILEPATH, "r") as cachefile:
+                with open(cls.CACHE_FILEPATH, "r") as cachefile:
                     cache = json.load(cachefile)
                 cache = {cache_ep_data["episode_id"]:Episode.from_dict(cache_ep_data) for cache_ep_data in cache}
                 logger.info("Cache HIT")
@@ -25,8 +31,8 @@ class Cacher:
                 traceback.print_exc()
                 cache = func(*args, **kwargs)
 
-            if not os.path.exists(CACHE_FILEPATH):
-                with open(CACHE_FILEPATH, "w") as cachefile:
+            if not os.path.exists(cls.CACHE_FILEPATH):
+                with open(cls.CACHE_FILEPATH, "w") as cachefile:
                     json.dump(cls.marshal_episodes_list(cache), cachefile)
 
             return cache
@@ -42,11 +48,11 @@ class Cacher:
     def cache_updater(cls, new_episodes: Dict[str, Episode]) -> None:
 
         try:
-            with open(CACHE_FILEPATH, "r") as cachefile:
+            with open(cls.CACHE_FILEPATH, "r") as cachefile:
                 data = json.load(cachefile)
             for ep in cls.marshal_episodes_list(new_episodes):
                 data.append(ep)
-            with open(CACHE_FILEPATH, "w") as cachefile:
+            with open(cls.CACHE_FILEPATH, "w") as cachefile:
                 json.dump(data, cachefile)
                 logger.info("Cache updated properly")
         except (IOError, ValueError):
