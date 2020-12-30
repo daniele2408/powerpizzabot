@@ -46,6 +46,7 @@ class SearchEngine:
         # TODO: /s dark soul prende prima Dark Crystal e poi "5 ORE DI DARK SOULS", non va bene
         # same: DLC di cuphead dà prima Cuphead e poi "DLC di Cuphead rimandato al 2021 because qualità"
         # altra idea per i match: fare un filtro min in base allo score max, se è 100 allora falli vedere fino a 90(?), non mi serve scendere e vedere i 70, se è 80 allora posso far vedere anche gli altri ecc
+        # altra cacca: se cerco anello "compagnia dell'anello mi viene per terzo, gestire apostrofo"
         token_set = (fuzz.token_set_ratio(descr, text_input), "token_set")
         token_sort = (fuzz.token_sort_ratio(descr, text_input), "token_sort")
         if len(text_input.split(" ")) == 1:
@@ -189,14 +190,13 @@ class EpisodeHandler:
                 n_last_episodes += 1
             else:  # we have all but the last one, we gucci
                 logger.info(f"Adding {n_last_episodes-1} new episodes!")
+                
                 new_episodes = last_episodes[:-1]
-                # converted_eps = {
-                #     new_ep["episode_id"]: self.convert_raw_ep(new_ep)
-                #     for new_ep in new_episodes
-                # }
                 procd_episodes = self.process_raw_episodes(new_episodes)
+
                 self.show.set_episodes = procd_episodes
                 Cacher.cache_updater(procd_episodes)
+
                 keep_checking = False
 
     def save_searches(self, *args):
