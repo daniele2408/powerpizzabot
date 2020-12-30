@@ -46,7 +46,7 @@ class SpreakerAPIClient:
                 url = res_json["response"]["next_url"]
         return episodes
 
-    def get_last_n_episode(self, show_id: str, n: int) -> Dict:
+    def get_last_n_episode(self, show_id: str, n: int) -> List[Dict]:
         url = (
             SpreakerAPIClient.GET_SHOW_EPISODES_URL.format(show_id)
             + f"?limit={n}&sorting=newest"
