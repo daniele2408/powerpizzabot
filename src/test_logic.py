@@ -1,12 +1,13 @@
 import pytest
 from logic.logic import SearchEngine, EpisodeHandler
 from model.models import Episode, EpisodeTopic, Show
-from support.configuration import CACHE_FILEPATH, RAW_EP_FILEPATH, PROCD_EP_FILEPATH, SNIPPET_TXT_FILEPATH
+from support.configuration import CACHE_FILEPATH, RAW_EP_FILEPATH, PROCD_EP_FILEPATH, SNIPPET_TXT_FILEPATH, THREE_RAW_EPS_FILEPATH
 from support.apiclient import SpreakerAPIClient
 from support.WordCounter import WordCounter
 import json
 from unittest.mock import patch
-
+import tempfile
+from support.Cacher import Cacher
 
 ############## fixtures ##############
 
@@ -47,6 +48,55 @@ def episode_procd():
 @pytest.fixture
 def episode_handler(mock_client, mock_show):
     return EpisodeHandler(mock_client, mock_show, WordCounter())
+
+def three_raw_episodes():
+    with open(THREE_RAW_EPS_FILEPATH, 'r') as f:
+        raw_eps = json.load(f)
+
+    # list_eps = list()
+
+    # for k, procd_ep in procd_ep.items():
+
+    #     episode = Episode(
+    #         procd_ep['episode_id'],
+    #         procd_ep['title'],
+    #         procd_ep['published_at'],
+    #         procd_ep['site_url'],
+    #         procd_ep['description_raw']
+    #     )
+    #     episode.topics = [EpisodeTopic(a['label'], a['url']) for a in procd_ep['topics']]
+
+    #     list_eps.append(procd_ep)
+
+    return raw_eps
+
+def mock_get_last_n_episode(self, show_id, n):
+    raw_eps = three_raw_episodes()
+    return [diz for idx, diz in raw_eps.items() if int(idx) < n]
+
+@pytest.fixture
+def client_get_last_eps():
+    with patch.object(SpreakerAPIClient, 'get_last_n_episode', new=mock_get_last_n_episode) as mock_method:
+        yield SpreakerAPIClient('testtoken')
+
+@pytest.fixture
+def show_all_eps_ids():
+    with patch.object(Show, 'get_episode_ids') as mock_show:
+        mock_show.return_value = set([42646233, 42556297, 42413933])
+        yield Show('testtoken')
+
+@pytest.fixture
+def show_miss_one_ep_ids():
+    with patch.object(Show, 'get_episode_ids') as mock_show:
+        mock_show.return_value = set([42556297, 42413933])
+        yield Show('testtoken')
+
+@pytest.fixture
+def show_miss_two_eps_ids():
+    with patch.object(Show, 'get_episode_ids') as mock_show:
+        mock_show.return_value = set([42413933])
+        yield Show('testtoken')
+
 
 ############## SearchEngine ##############
 
@@ -172,4 +222,47 @@ class TestEpisodeHandler:
 
         assert msg.replace('\n', '').strip() == exp_msg.strip()
 
-    #TODO: testa retrieve_new_episode, quindi mocka tutto dai cazzo
+    def test_retrieve_new_episodes_all(self, client_get_last_eps, show_all_eps_ids):
+
+        with tempfile.TemporaryDirectory() as tmpdirname:
+
+            Cacher.set_cache_folder(tmpdirname)
+            episode_handler = EpisodeHandler(client_get_last_eps, show_all_eps_ids, WordCounter())
+
+            n_episodes_before = len(episode_handler.show._episodes)
+
+            episode_handler.retrieve_new_episode()
+
+            n_episodes_after = len(episode_handler.show._episodes)
+
+            assert n_episodes_after == n_episodes_before
+
+    def test_retrieve_new_episodes_miss_one(self, client_get_last_eps, show_miss_one_ep_ids):
+
+        with tempfile.TemporaryDirectory() as tmpdirname:
+
+            Cacher.set_cache_folder(tmpdirname)
+            episode_handler = EpisodeHandler(client_get_last_eps, show_miss_one_ep_ids, WordCounter())
+
+            n_episodes_before = len(episode_handler.show._episodes)
+
+            episode_handler.retrieve_new_episode()
+
+            n_episodes_after = len(episode_handler.show._episodes)
+
+            assert n_episodes_after - n_episodes_before == 1
+
+    def test_retrieve_new_episodes_miss_two(self, client_get_last_eps, show_miss_two_eps_ids):
+
+        with tempfile.TemporaryDirectory() as tmpdirname:
+
+            Cacher.set_cache_folder(tmpdirname)
+            episode_handler = EpisodeHandler(client_get_last_eps, show_miss_two_eps_ids, WordCounter())
+
+            n_episodes_before = len(episode_handler.show._episodes)
+
+            episode_handler.retrieve_new_episode()
+
+            n_episodes_after = len(episode_handler.show._episodes)
+
+            assert n_episodes_after - n_episodes_before == 2
