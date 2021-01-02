@@ -1,13 +1,16 @@
 import pytest
 from logic.logic import SearchEngine, EpisodeHandler
 from model.models import Episode, EpisodeTopic, Show
-from support.configuration import CACHE_FILEPATH, RAW_EP_FILEPATH, PROCD_EP_FILEPATH, SNIPPET_TXT_FILEPATH, THREE_RAW_EPS_FILEPATH
+from support.configuration import CACHE_FILEPATH, RAW_EP_FILEPATH, PROCD_EP_FILEPATH, SNIPPET_TXT_FILEPATH, THREE_RAW_EPS_FILEPATH, SRC_FOLDER
 from support.apiclient import SpreakerAPIClient
 from support.WordCounter import WordCounter
 import json
 from unittest.mock import patch
 import tempfile
 from support.Cacher import Cacher
+import pathlib
+from collections import Counter
+import os
 
 ############## fixtures ##############
 
@@ -266,3 +269,30 @@ class TestEpisodeHandler:
             n_episodes_after = len(episode_handler.show._episodes)
 
             assert n_episodes_after - n_episodes_before == 2
+
+    def test_word_counter_save(self):
+        
+        TEST_COUNTER_FILEPATH = os.path.join(SRC_FOLDER, 'tests', 'word_count_test.json')
+
+        WordCounter.set_word_counter_filepath(TEST_COUNTER_FILEPATH)
+
+        word_counter = WordCounter()
+
+        word_counter.add_word('salve')
+        word_counter.add_word('salve')
+        word_counter.add_word('salve')
+        word_counter.add_word('ciao')
+        word_counter.add_word('ciao')
+        word_counter.add_word('arrivederci')
+
+        word_counter.dump_counter()
+
+        with open(TEST_COUNTER_FILEPATH, 'r') as f:
+            wc = Counter(json.load(f))
+
+        assert wc['salve'] == word_counter.counter['salve']
+        assert wc['ciao'] == word_counter.counter['ciao']
+        assert wc['arrivederci'] == word_counter.counter['arrivederci']
+
+        with open(TEST_COUNTER_FILEPATH, 'w') as f:
+            json.dump({}, f)

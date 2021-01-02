@@ -2,10 +2,17 @@ from support.configuration import SRC_FOLDER, config, WORD_COUNTER_FILEPATH
 import os
 import json
 from collections import Counter
+import logging
+
+logger = logging.getLogger('support.WordCounter')
 
 class WordCounter:
     instance = None
+    WORD_COUNTER_FILEPATH = WORD_COUNTER_FILEPATH
     
+    @classmethod
+    def set_word_counter_filepath(cls, new_path):
+        cls.WORD_COUNTER_FILEPATH = new_path
     
     def __new__(cls,*args, **kwargs):
         if cls.instance:
@@ -15,7 +22,7 @@ class WordCounter:
             return cls.instance        
 
     def __init__(self) -> None:
-        with open(WORD_COUNTER_FILEPATH, "r") as f:
+        with open(WordCounter.WORD_COUNTER_FILEPATH, "r") as f:
             data = json.load(f)
             counter: Counter = Counter(data)
         self.counter: Counter = counter
@@ -26,7 +33,7 @@ class WordCounter:
     def dump_counter(self):
         try:
             logger.info("Saving word counter cache...")
-            with open(WORD_COUNTER_FILEPATH, "w") as f:
+            with open(WordCounter.WORD_COUNTER_FILEPATH, "w") as f:
                 json.dump(self.counter, f)
                 logger.info("Saved word counter successfully")
                 return 1
