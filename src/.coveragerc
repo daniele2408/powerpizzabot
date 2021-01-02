@@ -1,0 +1,7 @@
+[xml]
+output=./report/coverage.xml
+
+[report]
+omit =
+    */test_logic.py
+    */site-packages/*

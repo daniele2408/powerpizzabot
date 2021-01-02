@@ -56,21 +56,6 @@ def three_raw_episodes():
     with open(THREE_RAW_EPS_FILEPATH, 'r') as f:
         raw_eps = json.load(f)
 
-    # list_eps = list()
-
-    # for k, procd_ep in procd_ep.items():
-
-    #     episode = Episode(
-    #         procd_ep['episode_id'],
-    #         procd_ep['title'],
-    #         procd_ep['published_at'],
-    #         procd_ep['site_url'],
-    #         procd_ep['description_raw']
-    #     )
-    #     episode.topics = [EpisodeTopic(a['label'], a['url']) for a in procd_ep['topics']]
-
-    #     list_eps.append(procd_ep)
-
     return raw_eps
 
 def mock_get_last_n_episode(self, show_id, n):
