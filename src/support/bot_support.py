@@ -174,10 +174,9 @@ class FacadeBot:
         )
 
         self.job_dump_cfg = job_queue.run_repeating(
-            callback=SearchConfigs.backup_job,
+            callback=SearchConfigs.dump_data,
             interval=60 * 60 * 6,
             first=30,
-            context=True,
         )
 
         self.job_dump_wc = job_queue.run_repeating(

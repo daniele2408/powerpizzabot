@@ -4,7 +4,7 @@ import traceback
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 import re
 import logging
-from support.configuration import CACHE_FILEPATH, SRC_FOLDER, config
+from support.configuration import CACHE_FILEPATH, USERS_CFG_FOLDER, config, USERS_CFG_FILEPATH
 from collections import defaultdict
 from datetime import datetime
 
@@ -108,6 +108,8 @@ class SearchConfigs:
 
     DATE_FORMAT = "%Y%m%dT%H%M%S"
     user_data: Dict[int, UserConfig] = defaultdict(lambda: UserConfig(5, 1))
+    DUMP_FOLDER = USERS_CFG_FOLDER
+    USERS_CFG_FILEPATH = USERS_CFG_FILEPATH
 
     @classmethod
     def get_user_cfg(cls, chat_id: int) -> UserConfig:
@@ -127,6 +129,8 @@ class SearchConfigs:
             return True
         elif field == "m" and cls.user_data[chat_id].m == value:
             return True
+        elif field not in set(["n", "m"]):
+            raise ValueError("Wrong config field, choose one between (n,m)")
         else:
             return False
 
@@ -148,36 +152,38 @@ class SearchConfigs:
         return data
 
     @classmethod
-    def dump_data(cls, is_back_up: bool = False) -> int:
-        filename = (
-            f"backup{datetime.strftime(datetime.now(), cls.DATE_FORMAT)}.json"
-            if is_back_up
-            else config["PATH"].get("USERS_CFG_FILEPATH")
-        )
-        filepath = os.path.join(SRC_FOLDER, filename)
+    def dump_data(cls) -> int:
+        filename_backup = f"backup{datetime.strftime(datetime.now(), cls.DATE_FORMAT)}.json"
+        filepath = cls.USERS_CFG_FILEPATH
+        filepath_backup = os.path.join(cls.DUMP_FOLDER, filename_backup)
         try:
+            with open(filepath_backup, "w") as f:
+                json.dump(cls.normalize_user_data(), f)
             with open(filepath, "w") as f:
                 json.dump(cls.normalize_user_data(), f)
-                return 1
+            return 1
         except Exception as e:
             logger.error(e)
             traceback.print_exc()
             return 0
 
     @classmethod
-    def backup_job(cls, context):
-        cls.dump_data(is_back_up=context.job.context)
+    def get_newest_backup(cls):
+        files = os.listdir(cls.DUMP_FOLDER)
+        paths = [os.path.join(cls.DUMP_FOLDER, basename) for basename in files]
+        return max(paths, key=os.path.getctime)
 
     @classmethod
     def init_data(cls) -> None:
         try:
+            last_backup_file = cls.get_newest_backup()
             with open(
-                os.path.join(SRC_FOLDER, config["PATH"].get("USERS_CFG_FILEPATH")), "r"
+                last_backup_file, "r"
             ) as f:
                 data = json.load(f)
 
                 for chat_id, payload in data.items():
-                    cls.user_data[int(chat_id)] = UserConfig(payload["n"], payload["m"])
+                    cls.user_data[int(chat_id)] = UserConfig(int(payload["n"]), int(payload["m"]))
 
         except Exception as e:
             logger.error(e)
