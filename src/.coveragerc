@@ -3,5 +3,7 @@ output=./report/coverage.xml
 
 [report]
 omit =
-    */test_logic.py
-    */site-packages/*
+        *test*
+        */usr/local/lib*
+        */__init__.py
+        */site-packages/*

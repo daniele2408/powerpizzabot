@@ -8,11 +8,10 @@ config = configparser.ConfigParser()
 
 if os.environ.get("PPB_ENV") == "prod":
     config.read(os.path.join(SRC_FOLDER, "config", "config_prod.ini"))
-elif os.environ.get("PPB_ENV") == "test":
+elif os.environ.get("PPB_ENV") in set(["test", "unittest"]):
     config.read(os.path.join(SRC_FOLDER, "config", "config.ini"))
 else:
-    config.read(os.path.join(SRC_FOLDER, "config", "config.ini"))
-    # raise ValueError("PPB_ENV not populated")  # fic test
+    raise ValueError("PPB_ENV not populated")  # fic test
 
 LOG_FILEPATH = os.path.join(SRC_FOLDER, config["PATH"].get("LOGGER_FILEPATH"))
 CACHE_FILEPATH: str = os.path.join(SRC_FOLDER, config["PATH"].get("CACHE_FILEPATH"))
@@ -42,3 +41,5 @@ THREE_RAW_EPS_FILEPATH = os.path.join(
 SNIPPET_TXT_FILEPATH = os.path.join(
     SRC_FOLDER, config["TEST"].get("SNIPPET_TXT_FILEPATH")
 )
+
+CREATOR_TELEGRAM_ID = config["SECRET"].get("CREATOR_TELEGRAM_ID")

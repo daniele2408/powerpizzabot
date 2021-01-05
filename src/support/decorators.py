@@ -34,7 +34,6 @@ def restricted(func):
             return func(update, context, *args, **kwargs)
         else:
             logger.info("User is None, can't identify user, access denied")
-            return
 
     return wrapped
 

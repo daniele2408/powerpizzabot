@@ -152,10 +152,11 @@ class SearchConfigs:
         return data
 
     @classmethod
-    def dump_data(cls) -> int:
+    def dump_data(cls, *args) -> int:
         filename_backup = f"backup{datetime.strftime(datetime.now(), cls.DATE_FORMAT)}.json"
         filepath = cls.USERS_CFG_FILEPATH
         filepath_backup = os.path.join(cls.DUMP_FOLDER, filename_backup)
+        logger.info(f"I'm doing a dump for usr cfg data, backup {filename_backup}.")
         try:
             with open(filepath_backup, "w") as f:
                 json.dump(cls.normalize_user_data(), f)

@@ -34,7 +34,9 @@ class MQBot(Bot):
     def __del__(self):
         try:
             self._msg_queue.stop()
-        except:
+        except Exception as e:
+            logger.error(f"Error in stopping msg_queue, {e}")
+            traceback.print_exc()
             pass
 
     @mq.queuedmessage
@@ -185,10 +187,12 @@ class FacadeBot:
             first=90
         )
 
-        # TODO: scrivi unit test
         # TODO: fai job per cancellare backup più vecchi
-        # TODO: fai comando per triggerare dump
+        # TODO: fai comando per triggerare tutti i dump
         # TODO: fai atexit dump il dumpabile
+        # TODO: funzione per vedere analytics (una classe?)
+        # TODO: aggiungi log chiamate al giorno per vedere serie storiche
+        # TODO: sposta i test in folder
 
     def dump_data(self, update: Update, context: CallbackContext) -> None:
         SearchConfigs.dump_data()

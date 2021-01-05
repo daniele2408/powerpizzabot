@@ -1,8 +1,9 @@
+import os
+os.environ["PPB_ENV"] = "unittest"
 from model.models import SearchConfigs, UserConfig, Episode, EpisodeTopic
 from support.configuration import PROCD_EP_FILEPATH, SRC_FOLDER
 import pytest
 import json
-import os
 
 ############## fixtures ##############
 
@@ -94,8 +95,6 @@ def test_populate_topic_wrong_description(episode_procd):
     assert not len(episode_procd.topics)
 
 ############## SearchConfig ##############
-
-#TODO: test this
 
 def test_get_user_cfg():
 

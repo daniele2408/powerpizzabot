@@ -33,7 +33,7 @@ from support.TextRepo import TextRepo
 
 from model.models import SearchConfigs, Show
 from logic.logic import EpisodeHandler
-from support.configuration import SRC_FOLDER, config, LOG_FILEPATH, CACHE_FILEPATH, LIST_OF_ADMINS, MINIMUM_SCORE
+from support.configuration import SRC_FOLDER, config, LOG_FILEPATH, CACHE_FILEPATH, LIST_OF_ADMINS, MINIMUM_SCORE, CREATOR_TELEGRAM_ID
 from support.apiclient import SpreakerAPIClient
 from support.bot_support import MQBot, FacadeBot
 from support.WordCounter import WordCounter
@@ -52,7 +52,6 @@ handler.setFormatter(logging.Formatter("{asctime} - {name} - {levelname} - {mess
 
 logger.addHandler(handler)
 
-#TODO: keep testing, cache path shoufl be still wrong, backup are wrong for sure
 def main():
 
     init_message_config = f"Booting up using {os.environ.get('PPB_ENV')} version"
@@ -84,7 +83,7 @@ def main():
     # dp.add_handler(CommandHandler("mycfg", facade_bot.show_my_config))  # hidden for now
     dp.add_handler(
         CommandHandler(
-            "dump", facade_bot.dump_data, filters=Filters.user(username="@itsaprankbro")
+            "dump", facade_bot.dump_data, filters=Filters.user(username=CREATOR_TELEGRAM_ID)
         )
     )
 
@@ -128,11 +127,11 @@ def main():
     # handler restarter
     dp.add_handler(
         CommandHandler(
-            "restart", restart, filters=Filters.user(username="@itsaprankbro")
+            "restart", restart, filters=Filters.user(username=CREATOR_TELEGRAM_ID)
         )
     )
     dp.add_handler(
-        CommandHandler("killme", kill, filters=Filters.user(username="@itsaprankbro"))
+        CommandHandler("killme", kill, filters=Filters.user(username=CREATOR_TELEGRAM_ID))
     )
 
     updater.start_polling()

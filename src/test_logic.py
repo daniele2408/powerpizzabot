@@ -1,3 +1,5 @@
+import os
+os.environ["PPB_ENV"] = "unittest"
 import pytest
 from logic.logic import SearchEngine, EpisodeHandler
 from model.models import Episode, EpisodeTopic, Show
@@ -10,7 +12,6 @@ import tempfile
 from support.Cacher import Cacher
 import pathlib
 from collections import Counter
-import os
 
 ############## fixtures ##############
 
@@ -64,7 +65,7 @@ def mock_get_last_n_episode(self, show_id, n):
 
 @pytest.fixture
 def client_get_last_eps():
-    with patch.object(SpreakerAPIClient, 'get_last_n_episode', new=mock_get_last_n_episode) as mock_method:
+    with patch.object(SpreakerAPIClient, 'get_last_n_episode', new=mock_get_last_n_episode):
         yield SpreakerAPIClient('testtoken')
 
 @pytest.fixture
@@ -181,18 +182,18 @@ class TestEpisodeHandler:
 
     def test_format_episode_line(self, episode_handler):
 
-        title_A = "120: Hard Chiacchiere feat. Kenobit"
-        title_B = "ep 120: Hard Chiacchiere feat. Kenobit"
+        title_a = "120: Hard Chiacchiere feat. Kenobit"
+        title_b = "ep 120: Hard Chiacchiere feat. Kenobit"
 
         url = "unurlacaso"
 
         expected = "Episodio 120: <a href='unurlacaso'> Hard Chiacchiere feat. Kenobit</a>"
 
-        res_A = episode_handler.format_episode_title_line(url, title_A)
-        res_B = episode_handler.format_episode_title_line(url, title_B)
+        res_a = episode_handler.format_episode_title_line(url, title_a)
+        res_b = episode_handler.format_episode_title_line(url, title_b)
 
-        assert expected == res_A
-        assert expected == res_B
+        assert expected == res_a
+        assert expected == res_b
 
     def test_format_response(self, episode_procd, episode_handler):
 
