@@ -23,7 +23,6 @@ USERS_CFG_FOLDER: str = os.path.join(
     config["PATH"].get("USERS_CFG_FOLDER")
 )
 
-config["PATH"].get("USERS_CFG_FOLDER")
 USERS_CFG_FILEPATH: str = os.path.join(
     USERS_CFG_FOLDER,
     config["PATH"].get("USERS_CFG_FILENAME")

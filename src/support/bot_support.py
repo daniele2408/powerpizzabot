@@ -11,8 +11,9 @@ from model.models import UserConfig
 from logic.logic import EpisodeHandler
 from support.configuration import LIST_OF_ADMINS, MINIMUM_SCORE
 from support.decorators import send_typing_action
-from typing import List
-
+from typing import List, Union, Tuple
+from utility.analytics import AnalyticsBackend
+from math import inf
 
 logger = logging.getLogger("support.bot_support")
 
@@ -76,6 +77,7 @@ def handle_text_messages(update: Update, context: CallbackContext) -> None:
 class FacadeBot:
     def __init__(self, episode_handler: EpisodeHandler) -> None:
         self.episode_handler = episode_handler
+        self.analytics = AnalyticsBackend(self.episode_handler)
         self.job = None
         self.job_dump_cfg = None
         self.job_dump_wc = None
@@ -105,7 +107,7 @@ class FacadeBot:
             )
 
     @staticmethod
-    def sanitize_digit(args, min_: int, max_: int) -> int:
+    def sanitize_digit(args, min_: Union[int, float], max_: Union[int, float]) -> int:
         res = re.compile("^[0-9]+$").match(" ".join(args))
         if res is None:
             raise ValueNotValid(TextRepo.MSG_NOT_VALID_INPUT)
@@ -189,11 +191,10 @@ class FacadeBot:
 
         # TODO: fai job per cancellare backup più vecchi
         # TODO: fai comando per triggerare tutti i dump
-        # TODO: fai atexit dump il dumpabile
-        # TODO: funzione per vedere analytics (una classe?)
         # TODO: aggiungi log chiamate al giorno per vedere serie storiche
         # TODO: sposta i test in folder
-
+        # TODO: unit test per analytics
+        
     def dump_data(self, update: Update, context: CallbackContext) -> None:
         SearchConfigs.dump_data()
 
@@ -212,3 +213,40 @@ class FacadeBot:
             )
         else:
             raise UpdateEffectiveMsgNotFound("update.effective_message None for /help")
+
+    def get_users_total_n(self, update: Update, context: CallbackContext) -> None:
+        if update.effective_message:
+
+            n = self.analytics.get_users_total_n()
+
+            update.effective_message.reply_text(
+                TextRepo.MSG_TOT_USERS.format(n)
+            )
+        else:
+            raise UpdateEffectiveMsgNotFound("update.effective_message None for /get_users_total_n")
+
+    def get_most_common_words(self, update: Update, context: CallbackContext) -> None:
+        if update.effective_message:
+
+            value = self.sanitize_digit(context.args, 1, inf)
+
+            most_common_words: List[Tuple[str, int]] = self.analytics.get_word_counter_top_n(value)
+
+            most_common_words_formatted = "\n".join([f"{word} ({n})" for word, n in most_common_words])
+
+            update.effective_message.reply_text(
+                TextRepo.MSG_MOST_COMMON_WORDS.format(value, most_common_words_formatted)
+            )
+        else:
+            raise UpdateEffectiveMsgNotFound("update.effective_message None for /get_most_common_words")
+
+    def get_episodes_total_n(self, update: Update, context: CallbackContext) -> None:
+        if update.effective_message:
+
+            n = self.analytics.get_episodes_total_n()
+
+            update.effective_message.reply_text(
+                TextRepo.MSG_TOT_EPS.format(n)
+            )
+        else:
+            raise UpdateEffectiveMsgNotFound("update.effective_message None for /get_episodes_total_n")        

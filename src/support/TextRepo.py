@@ -34,3 +34,7 @@ oppure qualsiasi altro argomento ti venga in mente.
  `/s <testo>`\nper ricercare un argomento tra quelli elencati negli scontrini delle puntate.\n
  `/top <n>`\nper far apparire solo i primi n messaggi nella ricerca.\n
     """
+
+    MSG_TOT_USERS = "{} utenti hanno usato finora il bot."
+    MSG_MOST_COMMON_WORDS = "Le {} parole più frequenti sono:\n\n{}"
+    MSG_TOT_EPS = "Al momento sono presenti {} episodi."
