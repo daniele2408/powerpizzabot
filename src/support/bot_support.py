@@ -200,14 +200,14 @@ class FacadeBot:
             first=120
         )        
 
-        # TODO: fai job per cancellare backup più vecchi
-        # TODO: fai comando per triggerare tutti i dump
         # TODO: aggiungi funzione per querare chiamate al giorno per vedere serie storiche
         # TODO: sposta i test in folder
         # TODO: unit test per analytics
         
     def dump_data(self, update: Update, context: CallbackContext) -> None:
         SearchConfigs.dump_data()
+        self.episode_handler.save_searches()
+        self.call_counter.dump_data()
 
     def start(self, update: Update, context: CallbackContext) -> None:
         if update.effective_message:

@@ -1,5 +1,6 @@
 import os
 import json
+import pathlib
 import traceback
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 import re
@@ -153,6 +154,7 @@ class SearchConfigs:
 
     @classmethod
     def dump_data(cls, *args) -> int:
+        cls.clean_folder()
         filename_backup = f"backup{datetime.strftime(datetime.now(), cls.DATE_FORMAT)}.json"
         filepath = cls.USERS_CFG_FILEPATH
         filepath_backup = os.path.join(cls.DUMP_FOLDER, filename_backup)
@@ -167,6 +169,27 @@ class SearchConfigs:
             logger.error(e)
             traceback.print_exc()
             return 0
+
+    @classmethod
+    def clean_folder(cls) -> None:
+        logger.info("Removing usr cfg older than 3 days...")
+        to_delete = set()
+        for filename in os.listdir(cls.DUMP_FOLDER):
+            year = int(filename[6:10])
+            month = int(filename[10:12])
+            day = int(filename[12:14])
+            hour = int(filename[15:17])
+            minute = int(filename[17:19])
+            second = int(filename[19:21])
+
+            timestamp = datetime(year, month, day, hour, minute, second)
+
+            if (datetime.now() - timestamp).days >= 3:
+                to_delete.add(os.path.join(cls.DUMP_FOLDER, filename))
+
+        for file_to_delete in to_delete:
+            os.remove(file_to_delete)
+    
 
     @classmethod
     def get_newest_backup(cls):
