@@ -11,9 +11,11 @@ from model.models import UserConfig
 from logic.logic import EpisodeHandler
 from support.configuration import LIST_OF_ADMINS, MINIMUM_SCORE
 from support.decorators import send_typing_action
-from typing import List, Union, Tuple
+from support.CallCounter import CallCounter
+from typing import List, Union, Tuple, Callable
 from utility.analytics import AnalyticsBackend
 from math import inf
+from functools import wraps
 
 logger = logging.getLogger("support.bot_support")
 
@@ -78,9 +80,11 @@ class FacadeBot:
     def __init__(self, episode_handler: EpisodeHandler) -> None:
         self.episode_handler = episode_handler
         self.analytics = AnalyticsBackend(self.episode_handler)
+        self.call_counter = CallCounter()
         self.job = None
         self.job_dump_cfg = None
         self.job_dump_wc = None
+        self.job_dump_cc = None
 
     @staticmethod
     def is_admin(chat_id: int) -> bool:
@@ -88,6 +92,7 @@ class FacadeBot:
 
     @send_typing_action
     def search(self, update: Update, context: CallbackContext) -> None:
+        self.call_counter.add_call()
         if not context.args:
             raise ArgumentListEmpty("No arguments sent.")
         if update.effective_message:
@@ -189,9 +194,15 @@ class FacadeBot:
             first=90
         )
 
+        self.job_dump_cc = job_queue.run_repeating(
+            callback=self.call_counter.dump_data,
+            interval=60 * 60,
+            first=120
+        )        
+
         # TODO: fai job per cancellare backup più vecchi
         # TODO: fai comando per triggerare tutti i dump
-        # TODO: aggiungi log chiamate al giorno per vedere serie storiche
+        # TODO: aggiungi funzione per querare chiamate al giorno per vedere serie storiche
         # TODO: sposta i test in folder
         # TODO: unit test per analytics
         
