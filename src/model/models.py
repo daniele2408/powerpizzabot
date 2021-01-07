@@ -171,10 +171,16 @@ class SearchConfigs:
             return 0
 
     @classmethod
+    def list_backup_files(cls):
+        for filename in os.listdir(cls.DUMP_FOLDER):
+            if filename.startswith('backup'):
+                yield filename
+
+    @classmethod
     def clean_folder(cls) -> None:
         logger.info("Removing usr cfg older than 3 days...")
         to_delete = set()
-        for filename in os.listdir(cls.DUMP_FOLDER):
+        for filename in cls.list_backup_files():
             year = int(filename[6:10])
             month = int(filename[10:12])
             day = int(filename[12:14])

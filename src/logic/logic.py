@@ -45,6 +45,7 @@ class SearchEngine:
     def compare_strings(cls, descr: str, text_input: str) -> Tuple[int, str]:
         # TODO: /s dark soul prende prima Dark Crystal e poi "5 ORE DI DARK SOULS", non va bene
         # same: DLC di cuphead dà prima Cuphead e poi "DLC di Cuphead rimandato al 2021 because qualità"
+        # rimuovere stopwords
         # altra idea per i match: fare un filtro min in base allo score max, se è 100 allora falli vedere fino a 90(?), non mi serve scendere e vedere i 70, se è 80 allora posso far vedere anche gli altri ecc
         # altra cacca: se cerco anello "compagnia dell'anello mi viene per terzo, gestire apostrofo"
         token_set = (fuzz.token_set_ratio(descr, text_input), "token_set")

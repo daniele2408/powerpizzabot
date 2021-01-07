@@ -14,6 +14,7 @@ Data: {}
     )
 
     MSG_NOT_VALID_INPUT = "Il valore inviato non ha un formato corretto, inserire un numero intero appartenente all'intervallo previsto."
+    MSG_NOT_VALID_DATE = "Le date immesse non hanno formato corretto - inserire DDMMYY oppure DDMMYY DDMMYY"
     MSG_NOT_VALID_RANGE = "Il valore inviato non è nell'intervallo previsto [{},{}]."
 
     MSG_SAME_VALUE = "Il numero di risultati mostrati è già pari a {}."
@@ -38,3 +39,13 @@ oppure qualsiasi altro argomento ti venga in mente.
     MSG_TOT_USERS = "{} utenti hanno usato finora il bot."
     MSG_MOST_COMMON_WORDS = "Le {} parole più frequenti sono:\n\n{}"
     MSG_TOT_EPS = "Al momento sono presenti {} episodi."
+
+    MSG_DAILY_REPORT = "Log giornaliero dal {} al {} (UTC)"
+
+    MSG_MEMO_AMDIN = """
+`/dump`\ndumpa tutto\n
+`/nu`\nutenti totali\n
+`/neps`\ntotale episodi\n
+`/ncw $n`\nparole più cercate\n
+`/qry $from [$to]`\nlog giornalieri da DDMMYY a oggi, oppure a DDMMYY\n
+"""

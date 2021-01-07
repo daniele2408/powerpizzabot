@@ -16,6 +16,7 @@ from typing import List, Union, Tuple, Callable
 from utility.analytics import AnalyticsBackend
 from math import inf
 from functools import wraps
+from datetime import datetime, timezone
 
 logger = logging.getLogger("support.bot_support")
 
@@ -79,8 +80,8 @@ def handle_text_messages(update: Update, context: CallbackContext) -> None:
 class FacadeBot:
     def __init__(self, episode_handler: EpisodeHandler) -> None:
         self.episode_handler = episode_handler
-        self.analytics = AnalyticsBackend(self.episode_handler)
         self.call_counter = CallCounter()
+        self.analytics = AnalyticsBackend(self.episode_handler, self.call_counter)
         self.job = None
         self.job_dump_cfg = None
         self.job_dump_wc = None
@@ -122,6 +123,30 @@ class FacadeBot:
                 raise ValueOutOfRange(TextRepo.MSG_NOT_VALID_RANGE.format(min_, max_))
             else:
                 return value
+
+    @staticmethod
+    def sanitize_dates(args) -> List[int]:
+        res = re.findall(r"[0-9]{6}", " ".join(args))
+        if not len(res) and len(res[0]) == len(res[1]) == 6 :
+            raise ValueNotValid(TextRepo.MSG_NOT_VALID_DATE)
+        else:
+            timestamps = list()
+            for date in res:
+                day = int(date[:2])
+                month = int(date[2:4])
+                year = int(date[4:])
+                is_day = day > 0 and day <= 31
+                is_month = month > 0 and month <= 12
+                is_year = year > 0 and year <= 99
+                if any({not is_day, not is_month, not is_year}):
+                    raise ValueNotValid(TextRepo.MSG_NOT_VALID_DATE)
+                timestamps.append(int(datetime(year=2000+year, month=month, day=day, tzinfo=timezone.utc).timestamp()))
+            if len(timestamps) == 1:
+                timestamps.append(int(datetime.now().timestamp()))
+            return timestamps
+
+
+
 
     def set_minimum_score(self, update: Update, context: CallbackContext) -> None:
         if update.effective_message:
@@ -200,7 +225,6 @@ class FacadeBot:
             first=120
         )        
 
-        # TODO: aggiungi funzione per querare chiamate al giorno per vedere serie storiche
         # TODO: sposta i test in folder
         # TODO: unit test per analytics
         
@@ -260,4 +284,35 @@ class FacadeBot:
                 TextRepo.MSG_TOT_EPS.format(n)
             )
         else:
-            raise UpdateEffectiveMsgNotFound("update.effective_message None for /get_episodes_total_n")        
+            raise UpdateEffectiveMsgNotFound("update.effective_message None for /get_episodes_total_n")
+
+    def get_daily_logs(self, update: Update, context: CallbackContext) -> None:
+        if update.effective_message:
+
+            from_, to_ = self.sanitize_dates(context.args)
+
+            dict_day_count = self.analytics.get_daily_searches(from_, to_)
+
+            msg = ""
+            for day, count in dict_day_count.items():
+                date = datetime.utcfromtimestamp(day).strftime('%d/%m/%y')
+                msg += f"\n{date}: {count}"
+
+            update.effective_message.reply_text(
+                TextRepo.MSG_DAILY_REPORT.format(
+                    datetime.utcfromtimestamp(from_).strftime('%d/%m/%y'),
+                    datetime.utcfromtimestamp(to_).strftime('%d/%m/%y')
+                ) + msg
+            )
+        else:
+            raise UpdateEffectiveMsgNotFound("update.effective_message None for /get_daily_logs")
+
+    def memo(self, update: Update, context: CallbackContext) -> None:
+        if update.effective_message:
+
+            update.effective_message.reply_text(
+                TextRepo.MSG_MEMO_AMDIN,
+                parse_mode=ParseMode.MARKDOWN
+            )
+        else:
+            raise UpdateEffectiveMsgNotFound("update.effective_message None for /memo")

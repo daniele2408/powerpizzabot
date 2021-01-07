@@ -91,6 +91,10 @@ def main():
     dp.add_handler(CommandHandler("nu", facade_bot.get_users_total_n, filters=Filters.user(username=CREATOR_TELEGRAM_ID)))
     dp.add_handler(CommandHandler("ncw", facade_bot.get_most_common_words, filters=Filters.user(username=CREATOR_TELEGRAM_ID)))
     dp.add_handler(CommandHandler("neps", facade_bot.get_episodes_total_n, filters=Filters.user(username=CREATOR_TELEGRAM_ID)))
+    dp.add_handler(CommandHandler("qry", facade_bot.get_daily_logs, filters=Filters.user(username=CREATOR_TELEGRAM_ID)))
+    
+    dp.add_handler(CommandHandler("memo", facade_bot.memo, filters=Filters.user(username=CREATOR_TELEGRAM_ID)))
+
 
     dp.add_handler(CommandHandler("start", facade_bot.start))
     dp.add_handler(CommandHandler("help", facade_bot.help))
