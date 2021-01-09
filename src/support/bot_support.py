@@ -10,7 +10,7 @@ from support.TextRepo import TextRepo
 from model.models import UserConfig
 from logic.logic import EpisodeHandler
 from support.configuration import LIST_OF_ADMINS, MINIMUM_SCORE
-from support.decorators import send_typing_action
+from support.decorators import send_typing_action, check_effective_message
 from support.CallCounter import CallCounter
 from typing import List, Union, Tuple, Callable
 from utility.analytics import AnalyticsBackend
@@ -92,25 +92,24 @@ class FacadeBot:
         return chat_id in LIST_OF_ADMINS
 
     @send_typing_action
+    @check_effective_message
     def search(self, update: Update, context: CallbackContext) -> None:
+        assert update.effective_message is not None  # for mypy, real check is in decorator
+
         self.call_counter.add_call()
         if not context.args:
             raise ArgumentListEmpty("No arguments sent.")
-        if update.effective_message:
-            chat_id: int = update.effective_message.chat_id
-            text: List[str] = context.args
-            user_cfg: UserConfig = SearchConfigs.get_user_cfg(chat_id)
 
-            message: str = self.episode_handler.search_text_in_episodes(
-                " ".join(text), user_cfg.n, MINIMUM_SCORE, self.is_admin(chat_id)
-            )
-            update.effective_message.reply_text(
-                message, parse_mode=ParseMode.HTML, disable_web_page_preview=True
-            )
-        else:
-            raise UpdateEffectiveMsgNotFound(
-                "update.effective_message None for /search"
-            )
+        chat_id: int = update.effective_message.chat_id
+        text: List[str] = context.args
+        user_cfg: UserConfig = SearchConfigs.get_user_cfg(chat_id)
+
+        message: str = self.episode_handler.search_text_in_episodes(
+            " ".join(text), user_cfg.n, MINIMUM_SCORE, self.is_admin(chat_id)
+        )
+        update.effective_message.reply_text(
+            message, parse_mode=ParseMode.HTML, disable_web_page_preview=True
+        )
 
     @staticmethod
     def sanitize_digit(args, min_: Union[int, float], max_: Union[int, float]) -> int:
@@ -145,59 +144,55 @@ class FacadeBot:
                 timestamps.append(int(datetime.now().timestamp()))
             return timestamps
 
-
-
-
+    @check_effective_message
     def set_minimum_score(self, update: Update, context: CallbackContext) -> None:
-        if update.effective_message:
-            chat_id = update.effective_message.chat_id
-            value = self.sanitize_digit(context.args, 1, 100)
+        assert update.effective_message is not None  # for mypy, real check is in decorator
 
-            if value != -1:
-                is_same = SearchConfigs.check_if_same_value(chat_id, value, "m")
-                if is_same:
-                    update.effective_message.reply_text(
-                        TextRepo.MSG_SAME_VALUE.format(value)
-                    )
-                    return
+        chat_id = update.effective_message.chat_id
+        value = self.sanitize_digit(context.args, 1, 100)
 
-                SearchConfigs.set_user_cfg(chat_id, value, "m")
+        if value != -1:
+            is_same = SearchConfigs.check_if_same_value(chat_id, value, "m")
+            if is_same:
                 update.effective_message.reply_text(
-                    TextRepo.MSG_SET_MIN_SCORE.format(value)
+                    TextRepo.MSG_SAME_VALUE.format(value)
                 )
-        else:
-            raise UpdateEffectiveMsgNotFound("update.effective_message None for /min")
+                return
 
-    def set_top_results(self, update: Update, context: CallbackContext) -> None:
-
-        if update.effective_message:
-            chat_id = update.effective_message.chat_id
-            value = self.sanitize_digit(context.args, 3, 10)
-
-            if value != -1:
-                is_same = SearchConfigs.check_if_same_value(chat_id, value, "n")
-                if is_same:
-                    update.effective_message.reply_text(
-                        TextRepo.MSG_SAME_VALUE.format(value)
-                    )
-                    return
-                SearchConfigs.set_user_cfg(chat_id, value, "n")
-                update.effective_message.reply_text(
-                    TextRepo.MSG_SET_FIRST_N.format(value)
-                )
-        else:
-            raise UpdateEffectiveMsgNotFound("update.effective_message None for /top")
-
-    def show_my_config(self, update: Update, context: CallbackContext) -> None:
-        if update.effective_message:  # TODO: use a decorator
-            chat_id = update.effective_message.chat_id
-
-            cfg_user = SearchConfigs.get_user_cfg(chat_id)
+            SearchConfigs.set_user_cfg(chat_id, value, "m")
             update.effective_message.reply_text(
-                TextRepo.MSG_PRINT_CFG.format(cfg_user.n, cfg_user.m)
+                TextRepo.MSG_SET_MIN_SCORE.format(value)
             )
-        else:
-            raise UpdateEffectiveMsgNotFound("update.effective_message None for /mycfg")
+
+    @check_effective_message
+    def set_top_results(self, update: Update, context: CallbackContext) -> None:
+        assert update.effective_message is not None  # for mypy, real check is in decorator
+
+        chat_id = update.effective_message.chat_id
+        value = self.sanitize_digit(context.args, 3, 10)
+
+        if value != -1:
+            is_same = SearchConfigs.check_if_same_value(chat_id, value, "n")
+            if is_same:
+                update.effective_message.reply_text(
+                    TextRepo.MSG_SAME_VALUE.format(value)
+                )
+                return
+            SearchConfigs.set_user_cfg(chat_id, value, "n")
+            update.effective_message.reply_text(
+                TextRepo.MSG_SET_FIRST_N.format(value)
+            )
+
+    @check_effective_message
+    def show_my_config(self, update: Update, context: CallbackContext) -> None:
+        assert update.effective_message is not None  # for mypy, real check is in decorator
+
+        chat_id = update.effective_message.chat_id
+
+        cfg_user = SearchConfigs.get_user_cfg(chat_id)
+        update.effective_message.reply_text(
+            TextRepo.MSG_PRINT_CFG.format(cfg_user.n, cfg_user.m)
+        )
 
     def schedule_jobs(self, job_queue):
 
@@ -230,86 +225,80 @@ class FacadeBot:
         self.episode_handler.save_searches()
         self.call_counter.dump_data()
 
+    @check_effective_message
     def start(self, update: Update, context: CallbackContext) -> None:
-        if update.effective_message:
-            update.effective_message.reply_text(
-                TextRepo.MSG_START, parse_mode=ParseMode.MARKDOWN
-            )
-        else:
-            raise UpdateEffectiveMsgNotFound("update.effective_message None for /start")
+        assert update.effective_message is not None  # for mypy, real check is in decorator
 
+        update.effective_message.reply_text(
+            TextRepo.MSG_START, parse_mode=ParseMode.MARKDOWN
+        )
+
+    @check_effective_message
     def help(self, update: Update, context: CallbackContext) -> None:
-        if update.effective_message:
-            update.effective_message.reply_text(
-                TextRepo.MSG_START, parse_mode=ParseMode.MARKDOWN
-            )
-        else:
-            raise UpdateEffectiveMsgNotFound("update.effective_message None for /help")
+        assert update.effective_message is not None  # for mypy, real check is in decorator
 
+        update.effective_message.reply_text(
+            TextRepo.MSG_START, parse_mode=ParseMode.MARKDOWN
+        )
+
+    @check_effective_message
     def get_users_total_n(self, update: Update, context: CallbackContext) -> None:
-        if update.effective_message:
+        assert update.effective_message is not None  # for mypy, real check is in decorator
 
-            n = self.analytics.get_users_total_n()
+        n = self.analytics.get_users_total_n()
 
-            update.effective_message.reply_text(
-                TextRepo.MSG_TOT_USERS.format(n)
-            )
-        else:
-            raise UpdateEffectiveMsgNotFound("update.effective_message None for /get_users_total_n")
+        update.effective_message.reply_text(
+            TextRepo.MSG_TOT_USERS.format(n)
+        )
 
+    @check_effective_message
     def get_most_common_words(self, update: Update, context: CallbackContext) -> None:
-        if update.effective_message:
+        assert update.effective_message is not None  # for mypy, real check is in decorator
 
-            value = self.sanitize_digit(context.args, 1, inf)
+        value = self.sanitize_digit(context.args, 1, inf)
 
-            most_common_words: List[Tuple[str, int]] = self.analytics.get_word_counter_top_n(value)
+        most_common_words: List[Tuple[str, int]] = self.analytics.get_word_counter_top_n(value)
+        most_common_words_formatted = "\n".join([f"{word} ({n})" for word, n in most_common_words])
 
-            most_common_words_formatted = "\n".join([f"{word} ({n})" for word, n in most_common_words])
+        update.effective_message.reply_text(
+            TextRepo.MSG_MOST_COMMON_WORDS.format(value, most_common_words_formatted)
+        )
 
-            update.effective_message.reply_text(
-                TextRepo.MSG_MOST_COMMON_WORDS.format(value, most_common_words_formatted)
-            )
-        else:
-            raise UpdateEffectiveMsgNotFound("update.effective_message None for /get_most_common_words")
-
+    @check_effective_message
     def get_episodes_total_n(self, update: Update, context: CallbackContext) -> None:
-        if update.effective_message:
+        assert update.effective_message is not None  # for mypy, real check is in decorator
 
-            n = self.analytics.get_episodes_total_n()
+        n = self.analytics.get_episodes_total_n()
 
-            update.effective_message.reply_text(
-                TextRepo.MSG_TOT_EPS.format(n)
-            )
-        else:
-            raise UpdateEffectiveMsgNotFound("update.effective_message None for /get_episodes_total_n")
+        update.effective_message.reply_text(
+            TextRepo.MSG_TOT_EPS.format(n)
+        )
 
+    @check_effective_message
     def get_daily_logs(self, update: Update, context: CallbackContext) -> None:
-        if update.effective_message:
+        assert update.effective_message is not None  # for mypy, real check is in decorator
 
-            from_, to_ = self.sanitize_dates(context.args)
+        from_, to_ = self.sanitize_dates(context.args)
 
-            dict_day_count = self.analytics.get_daily_searches(from_, to_)
+        dict_day_count = self.analytics.get_daily_searches(from_, to_)
 
-            msg = ""
-            for day, count in dict_day_count.items():
-                date = datetime.utcfromtimestamp(day).strftime('%d/%m/%y')
-                msg += f"\n{date}: {count}"
+        msg = ""
+        for day, count in dict_day_count.items():
+            date = datetime.utcfromtimestamp(day).strftime('%d/%m/%y')
+            msg += f"\n{date}: {count}"
 
-            update.effective_message.reply_text(
-                TextRepo.MSG_DAILY_REPORT.format(
-                    datetime.utcfromtimestamp(from_).strftime('%d/%m/%y'),
-                    datetime.utcfromtimestamp(to_).strftime('%d/%m/%y')
-                ) + msg
-            )
-        else:
-            raise UpdateEffectiveMsgNotFound("update.effective_message None for /get_daily_logs")
+        update.effective_message.reply_text(
+            TextRepo.MSG_DAILY_REPORT.format(
+                datetime.utcfromtimestamp(from_).strftime('%d/%m/%y'),
+                datetime.utcfromtimestamp(to_).strftime('%d/%m/%y')
+            ) + msg
+        )
 
+    @check_effective_message
     def memo(self, update: Update, context: CallbackContext) -> None:
-        if update.effective_message:
+        assert update.effective_message is not None  # for mypy, real check is in decorator
 
-            update.effective_message.reply_text(
-                TextRepo.MSG_MEMO_AMDIN,
-                parse_mode=ParseMode.MARKDOWN
-            )
-        else:
-            raise UpdateEffectiveMsgNotFound("update.effective_message None for /memo")
+        update.effective_message.reply_text(
+            TextRepo.MSG_MEMO_AMDIN,
+            parse_mode=ParseMode.MARKDOWN
+        )

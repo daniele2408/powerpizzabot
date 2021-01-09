@@ -3,9 +3,21 @@ from telegram.ext import CallbackContext
 from typing import Callable
 from functools import wraps
 from support.configuration import LIST_OF_ADMINS
+from model.custom_exceptions import UpdateEffectiveMsgNotFound
 import logging
 
 logger = logging.getLogger("decorators")
+
+def check_effective_message(func: Callable) -> Callable:
+    
+    @wraps(func)
+    def wrapped_func(self, update: Update, context: CallbackContext):
+        if update.effective_message:
+            func(self, update, context)
+        else:
+            raise UpdateEffectiveMsgNotFound(f"update.effective_message None for {func.__name__}")
+    
+    return wrapped_func
 
 def send_typing_action(func: Callable) -> Callable:
     """Sends typing action while processing func command."""
