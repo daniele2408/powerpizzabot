@@ -1,15 +1,18 @@
 import os
+import sys
 os.environ["PPB_ENV"] = "unittest"
+myPath = os.path.dirname(os.path.abspath(__file__))  #TODO: sposta config test con i path per le risorse dei test
+sys.path.insert(0, myPath + '/../src/')
 import pytest
 from logic.logic import SearchEngine, EpisodeHandler
 from model.models import Episode, EpisodeTopic, Show
-from support.configuration import CACHE_FILEPATH, RAW_EP_FILEPATH, PROCD_EP_FILEPATH, SNIPPET_TXT_FILEPATH, THREE_RAW_EPS_FILEPATH, SRC_FOLDER
+from configuration_test import RAW_EP_FILEPATH, PROCD_EP_FILEPATH, SNIPPET_TXT_FILEPATH, THREE_RAW_EPS_FILEPATH, SRC_TEST_FOLDER
 from support.apiclient import SpreakerAPIClient
 from support.WordCounter import WordCounter
+from support.Cacher import Cacher
 import json
 from unittest.mock import patch
 import tempfile
-from support.Cacher import Cacher
 import pathlib
 from collections import Counter
 
@@ -258,7 +261,7 @@ class TestEpisodeHandler:
 
     def test_word_counter_save(self):
         
-        TEST_COUNTER_FILEPATH = os.path.join(SRC_FOLDER, 'tests', 'word_count_test.json')
+        TEST_COUNTER_FILEPATH = os.path.join(SRC_TEST_FOLDER, 'resources', 'word_count_test.json')
 
         WordCounter.set_word_counter_filepath(TEST_COUNTER_FILEPATH)
 

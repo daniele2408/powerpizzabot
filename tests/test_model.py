@@ -1,7 +1,7 @@
 import os
 os.environ["PPB_ENV"] = "unittest"
 from model.models import SearchConfigs, UserConfig, Episode, EpisodeTopic
-from support.configuration import PROCD_EP_FILEPATH, SRC_FOLDER
+from configuration_test import PROCD_EP_FILEPATH, SRC_TEST_FOLDER
 import pytest
 import json
 
@@ -31,8 +31,8 @@ def raw_ep():
 
 @pytest.fixture(autouse=True)
 def run_before():
-    SearchConfigs.DUMP_FOLDER = os.path.join(SRC_FOLDER, 'tests/usr_cfg_test')
-    SearchConfigs.USERS_CFG_FILEPATH = os.path.join(SRC_FOLDER, 'tests/usr_cfg_test', 'users_cfg.json')
+    SearchConfigs.DUMP_FOLDER = os.path.join(SRC_TEST_FOLDER, 'resources/usr_cfg_test')
+    SearchConfigs.USERS_CFG_FILEPATH = os.path.join(SRC_TEST_FOLDER, 'resources/usr_cfg_test', 'users_cfg.json')
     SearchConfigs.user_data[1] = UserConfig(5,1)
     SearchConfigs.user_data[2] = UserConfig(10,30)
     SearchConfigs.user_data[3] = UserConfig(3,90)

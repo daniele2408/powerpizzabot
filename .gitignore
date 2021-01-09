@@ -4,8 +4,8 @@
 __pycache__/*
 *.pyc
 *.out
-*/.scannerwork/*
+**/.scannerwork/*
 coverage.xml
-src/sonar-project.properties
-src/.coverage
+sonar-project.properties
 readme-interal.md
+.coverage
