@@ -39,7 +39,7 @@ class AnalyticsBackend:
     def is_timestamp_between(date: int, from_: int, to: int) -> bool:
         return date >= from_ and date <= to
 
-    def get_daily_searches(self, from_: int, to: int) -> Dict[int, int]:
+    def get_daily_searches(self, from_: int, to: int) -> Counter:
 
         # have to convert in minutes
         from_ = (from_ // 3600 * 3600)
@@ -47,12 +47,13 @@ class AnalyticsBackend:
         
         counter_time_interval = {int(timestamp): c for timestamp, c in self.call_counter.counter.items() if self.is_timestamp_between(int(timestamp), from_, to)}
 
-        func_flat_days = lambda x: x // 24 * 24
+        seconds_in_a_day = 60 * 60 * 24
+        func_flat_days = lambda x: x // seconds_in_a_day * seconds_in_a_day
         sorted_timestamps = sorted(counter_time_interval.keys(), key=func_flat_days)
         
-        dict_groupby = dict()
+        dict_groupby: Counter = Counter()
         for timestamp, group in groupby(sorted_timestamps, key=func_flat_days):
-            dict_groupby[timestamp] = sum([counter_time_interval[timestamp] for timestamp in group])
+            dict_groupby[func_flat_days(timestamp)] += sum([counter_time_interval[timestamp] for timestamp in group])
 
         return dict_groupby
 

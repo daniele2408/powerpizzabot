@@ -225,9 +225,6 @@ class FacadeBot:
             first=120
         )        
 
-        # TODO: sposta i test in folder
-        # TODO: unit test per analytics
-        
     def dump_data(self, update: Update, context: CallbackContext) -> None:
         SearchConfigs.dump_data()
         self.episode_handler.save_searches()

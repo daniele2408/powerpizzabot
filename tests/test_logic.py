@@ -1,7 +1,7 @@
 import os
 import sys
 os.environ["PPB_ENV"] = "unittest"
-myPath = os.path.dirname(os.path.abspath(__file__))  #TODO: sposta config test con i path per le risorse dei test
+myPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, myPath + '/../src/')
 import pytest
 from logic.logic import SearchEngine, EpisodeHandler
