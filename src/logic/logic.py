@@ -5,28 +5,39 @@ from support.TextRepo import TextRepo
 import logging
 from support.apiclient import SpreakerAPIClient
 from model.models import Show
+from model.custom_exceptions import ValueNotValid
 from typing import Dict, List
 from support.WordCounter import WordCounter
 from support.Cacher import Cacher
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Set
 from model.models import Episode
 from unidecode import unidecode
 import traceback
 import re
 from fuzzywuzzy import fuzz
 from model.models import EpisodeTopic
+from stop_words import get_stop_words
+from itertools import combinations
 
 logger = logging.getLogger('logic.logic')
 
-TopicSnippet = Tuple[str, EpisodeTopic, int, str, str]
+TopicSnippet = Tuple[str, EpisodeTopic, int, str, str, int]
 
 class SearchEngine:
+
+    IT_STOP_WORDS: Set[int] = set(get_stop_words('it'))
+    EN_STOP_WORDS: Set[int] = set(get_stop_words('en'))
+
     @classmethod
     def generate_sorted_topics(
         cls, episodes: Dict[str, Episode], text: str
     ) -> Tuple[List[TopicSnippet], str, int]:
         episodes_topic = list()
         normalized_text = cls.normalize_string(text)
+
+        if not normalized_text:
+            raise ValueNotValid("Il testo inviato non contiene caratteri alfanumerici oppure non contiene parole significative, ricerca annullata.")
+
         for ep in episodes.values():
             episodes_topic.extend(cls.scan_episode(ep, normalized_text))
 
@@ -38,41 +49,42 @@ class SearchEngine:
             max_score
         )
 
-    @staticmethod
-    def normalize_string(s: str) -> str:
+    @classmethod
+    def normalize_string(cls, s: str) -> str:
         s = unidecode(s.lower())
         s = re.sub("[^A-Za-z0-9 ]+", " ", s)
+        for word in s.split(" "):
+            if word in cls.EN_STOP_WORDS or word in cls.IT_STOP_WORDS:
+                s = re.sub(r"\b{}\b".format(word), "", s)
         s = re.sub("[ ]+", " ", s).strip()
+
         return s
 
     @classmethod
-    def compare_strings(cls, descr: str, text_input: str) -> Tuple[int, str]:
-        token_set = (fuzz.token_set_ratio(descr, text_input), "token_set")
-        token_sort = (fuzz.token_sort_ratio(descr, text_input), "token_sort")
-        if len(text_input.split(" ")) == 1:
-            max_partial = (
-                max([fuzz.ratio(text_input, word) for word in descr.split(" ")]),
-                "max_simple_ratio",
-            )
-        else:
-            max_partial = (0, "max_simple_ratio")
+    def compare_strings(cls, descr: str, text_input: str) -> Tuple[int, str, int]:
 
-        sum_means = 0
-        for word_input in text_input.split(" "):
-            sum_means += max([fuzz.ratio(word_input, w) for w in descr.split(" ")])
+        max_list = list()
+        text_input_words = text_input.split(" ")
+        combs = list()
+        for ngram in range(1, len(text_input_words)+1):
+            for combination in combinations(text_input_words, ngram):
+                combs.append(combination)
 
-        return int(sum_means / len(text_input)), "mean_most_similar_combo"
+        for word_inputs in combs:
+            max_list.append(max([fuzz.ratio("".join(word_inputs), w) for w in descr.split(" ")]))
+
+        return int(sum(max_list) / len(text_input_words)), "mean_most_similar_combo", max(max_list)
 
 
     @classmethod
     def scan_episode(cls, episode: Episode, normalized_text: str) -> List[TopicSnippet]:
         ls_res = list()
         for topic in episode.topics:
-            match_score, technique = cls.compare_strings(
+            match_score, technique, max_score = cls.compare_strings(
                 cls.normalize_string(topic.label), normalized_text
             )
             ls_res.append(
-                (episode.episode_id, topic, match_score, technique, topic.url)
+                (episode.episode_id, topic, match_score, technique, topic.url, max_score)
             )
         return ls_res
 
@@ -129,18 +141,20 @@ class EpisodeHandler:
             return ""
 
     def search_text_in_episodes(
-        self, text: str, n: int, m: int, show_tech: bool = False
-    ) -> str:
+        self, text: str, n: int, m: int, is_admin: bool = False
+    ) -> Tuple[str, str]:
         sorted_tuple_episodes, normalized_text, max_score = SearchEngine.generate_sorted_topics(
             self.show.episodes, text
         )
-        self.word_counter.add_word(normalized_text)
-        filter_episodes = [tpl for tpl in sorted_tuple_episodes if tpl[2] > int(max_score * .75)][:n]
+        if not is_admin:
+            self.word_counter.add_word(normalized_text)
+            
+        filter_episodes = [tpl for tpl in sorted_tuple_episodes if tpl[5] >= m and tpl[2] >= max_score * .75][:n]
 
         if len(filter_episodes):
-            return self.format_response(filter_episodes, show_tech)
+            return self.format_response(filter_episodes, is_admin), text
         else:
-            return TextRepo.MSG_NO_RES.format(m)
+            return TextRepo.MSG_NO_RES, text
 
     def format_response(
         self, first_eps_sorted: List[TopicSnippet], admin_req: bool
@@ -153,6 +167,7 @@ class EpisodeHandler:
             score = f"SCORE {tuple_[2]}" if admin_req else ""
             topic_url = tuple_[4]
             topic_label = tuple_[1].label
+            max_score = tuple_[5]
             episode_line = self.format_episode_title_line(ep.site_url, ep.title)
             date = self.convert_to_italian_date_format(ep.published_at)
             message += TextRepo.MSG_RESPONSE.format(
@@ -161,6 +176,7 @@ class EpisodeHandler:
 
             technique_used = tuple_[3]
             message += f"\nTechnique: {technique_used}\n" if admin_req else "\n"
+            message += f"\nMax Score: {max_score}" if admin_req else ""
             i += 1
 
         return message
@@ -198,5 +214,5 @@ class EpisodeHandler:
                 keep_checking = False
 
     def save_searches(self, *args):
-        self.word_counter.dump_counter()
+        return self.word_counter.dump_counter()
 

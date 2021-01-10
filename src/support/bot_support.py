@@ -95,18 +95,22 @@ class FacadeBot:
     @check_effective_message
     def search(self, update: Update, context: CallbackContext) -> None:
         assert update.effective_message is not None  # for mypy, real check is in decorator
+        chat_id: int = update.effective_message.chat_id
 
-        self.call_counter.add_call()
+        is_admin = self.is_admin(chat_id)
+
+        if not is_admin:
+            self.call_counter.add_call()
         if not context.args:
             raise ArgumentListEmpty("No arguments sent.")
 
-        chat_id: int = update.effective_message.chat_id
         text: List[str] = context.args
         user_cfg: UserConfig = SearchConfigs.get_user_cfg(chat_id)
 
-        message: str = self.episode_handler.search_text_in_episodes(
-            " ".join(text), user_cfg.n, MINIMUM_SCORE, self.is_admin(chat_id)
+        message, text = self.episode_handler.search_text_in_episodes(
+            " ".join(text), user_cfg.n, MINIMUM_SCORE, is_admin
         )
+
         update.effective_message.reply_text(
             message, parse_mode=ParseMode.HTML, disable_web_page_preview=True
         )
@@ -220,10 +224,11 @@ class FacadeBot:
             first=120
         )        
 
-    def dump_data(self, update: Update, context: CallbackContext) -> None:
-        SearchConfigs.dump_data()
-        self.episode_handler.save_searches()
-        self.call_counter.dump_data()
+    def dump_data(self, update: Update, context: CallbackContext):
+        res_dump_cfg = SearchConfigs.dump_data()
+        res_dump_search = self.episode_handler.save_searches()
+        res_dump_call = self.call_counter.dump_data()
+        return zip([res_dump_cfg, res_dump_search, res_dump_call], ['dump_cfg', 'dump_search', 'dump_call'])
 
     @check_effective_message
     def start(self, update: Update, context: CallbackContext) -> None:

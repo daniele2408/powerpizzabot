@@ -1,6 +1,6 @@
 class TextRepo:
 
-    MSG_NO_RES = "Spiacente! Nessun match con le impostazioni correnti (minimo {}% di matching score)."
+    MSG_NO_RES = "Spiacente! Nessun match rilevato."
 
     MSG_RESPONSE = """
 ---------------- MATCH #{} --{}--------------

@@ -40,12 +40,12 @@ from support.WordCounter import WordCounter
 from support.bot_support import error_callback
 from support.decorators import restricted
 
+#TODO: encrypt ids
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 logger = logging.getLogger("main_bot")
-# Add the log message handler to the logger
 handler = logging.handlers.RotatingFileHandler(
               LOG_FILEPATH, maxBytes=100000, backupCount=5)
 handler.setFormatter(logging.Formatter("{asctime} - {name} - {levelname} - {message}", style='{'))
@@ -114,22 +114,25 @@ def main():
 
     @restricted
     def restart(update, context):
-        res_save = SearchConfigs.dump_data()
-        if res_save:  # save success
-            update.message.reply_text("Data saved successfully")
-        else:
-            update.message.reply_text("Something went wrong saving data...")
+        result_dump = facade_bot.dump_data(update, context)
+
+        for res_dump, name_dump in result_dump:
+            update.message.reply_text(
+                f"{name_dump} save " + "success." if res_dump else "fail."
+            )
 
         update.message.reply_text("Bot is restarting...")
         Thread(target=stop_and_restart).start()
 
     @restricted
     def kill(update, context):
-        res_save = SearchConfigs.dump_data()
-        if res_save:  # save success
-            update.message.reply_text("Data saved successfully")
-        else:
-            update.message.reply_text("Something went wrong saving data...")
+        result_dump = facade_bot.dump_data(update, context)
+
+        for res_dump, name_dump in result_dump:
+            update.message.reply_text(
+                f"{name_dump} save " + "success." if res_dump else "fail."
+            )
+
         update.message.reply_text("See you, space cowboy...")
         Thread(target=kill_bot).start()
 

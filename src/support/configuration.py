@@ -35,7 +35,7 @@ USERS_CFG_FILEPATH: str = os.path.join(
 LIST_OF_ADMINS: Set[int] = set(
     [int(admin_id) for key, admin_id in config.items("ADMINS")]
 )
-MINIMUM_SCORE = 50
+MINIMUM_SCORE = 70
 
 RAW_EP_FILEPATH = os.path.join(SRC_FOLDER, config["TEST"].get("RAW_EP_FILEPATH"))
 PROCD_EP_FILEPATH = os.path.join(SRC_FOLDER, config["TEST"].get("PROCD_EP_FILEPATH"))
