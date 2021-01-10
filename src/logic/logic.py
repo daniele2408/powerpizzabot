@@ -85,8 +85,6 @@ class SearchEngine:
 
 class EpisodeHandler:
 
-    # TODO: considera un singletone con __new__ e chiamarlo da dentro search()
-
     def __init__(
         self, client: SpreakerAPIClient, show: Show, word_counter: WordCounter
     ) -> None:
