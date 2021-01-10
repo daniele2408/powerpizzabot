@@ -98,13 +98,13 @@ class TestSearchEngine:
 
         set_words = {
             ("ciao", "ciao"),
-            ("ciao*%$)/%$ciao", "ciaociao"),
+            ("ciao*%$)/%$ciao", "ciao ciao"),
             ("ne", "ne"),
             ("La vita è bella", "la vita e bella"),
             ("Passerà", "passera"),
             ("Corfù", "corfu"),
             ("Ma però così proprio non si può", "ma pero cosi proprio non si puo"),
-            ("$%$=CI$$aO", "ciao"),
+            ("$%$=CI$$aO", "ci ao"),
             ("   strippami   ", "strippami"),
             ("niente  doppi     o tripli     o più    spazi", "niente doppi o tripli o piu spazi")
         }
@@ -133,7 +133,7 @@ class TestSearchEngine:
 
         dict_str = {
             "uccello": {
-                "uccellox",
+                "uccell",
                 "uccellino",
                 "uccelletto",
                 "uccullo"
@@ -146,14 +146,14 @@ class TestSearchEngine:
                 set_res.add((w, SearchEngine.compare_strings(str_, w)[0]))
                 
 
-        assert max(set_res, key=lambda x: x[1])[0] == "uccellox"
+        assert max(set_res, key=lambda x: x[1])[0] == "uccell"
 
     def test_generate_sorted_topics(self, episode_procd):
 
         episodes = {'42314321': episode_procd}
         text = 'babbo'
 
-        ls_eps, normalized_text = SearchEngine.generate_sorted_topics(episodes, text)
+        ls_eps, normalized_text, max_score = SearchEngine.generate_sorted_topics(episodes, text)
 
         assert len(ls_eps) == len(episode_procd.topics)
         assert ls_eps[0][1].label == 'A Babbo Morto - Zerocalcare'
@@ -203,9 +203,12 @@ class TestEpisodeHandler:
         episodes = {'42314321': episode_procd}
         text = 'babbo'
 
-        ls_eps, normalized_text = SearchEngine.generate_sorted_topics(episodes, text)
+        ls_eps, normalized_text, max_score = SearchEngine.generate_sorted_topics(episodes, text)
 
-        msg = episode_handler.format_response(ls_eps, False)
+        filter_episodes = [tpl for tpl in ls_eps if tpl[2] > int(max_score * .75)]
+
+
+        msg = episode_handler.format_response(filter_episodes, False)
 
         with open(SNIPPET_TXT_FILEPATH, 'r') as f:
             exp_msg = ''

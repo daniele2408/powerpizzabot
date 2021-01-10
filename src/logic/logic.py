@@ -11,6 +11,7 @@ from support.Cacher import Cacher
 from typing import Dict, List, Tuple
 from model.models import Episode
 from unidecode import unidecode
+import traceback
 import re
 from fuzzywuzzy import fuzz
 from model.models import EpisodeTopic
@@ -23,31 +24,29 @@ class SearchEngine:
     @classmethod
     def generate_sorted_topics(
         cls, episodes: Dict[str, Episode], text: str
-    ) -> Tuple[List[TopicSnippet], str]:
+    ) -> Tuple[List[TopicSnippet], str, int]:
         episodes_topic = list()
         normalized_text = cls.normalize_string(text)
         for ep in episodes.values():
             episodes_topic.extend(cls.scan_episode(ep, normalized_text))
 
+        max_score = max(episodes_topic, key=lambda x: x[2])[2]
+
         return (
             sorted(episodes_topic, key=lambda x: (-x[2], len(x[1].label))),
             normalized_text,
+            max_score
         )
 
     @staticmethod
     def normalize_string(s: str) -> str:
         s = unidecode(s.lower())
-        s = re.sub("[^A-Za-z0-9 ]+", "", s)
+        s = re.sub("[^A-Za-z0-9 ]+", " ", s)
         s = re.sub("[ ]+", " ", s).strip()
         return s
 
     @classmethod
     def compare_strings(cls, descr: str, text_input: str) -> Tuple[int, str]:
-        # TODO: /s dark soul prende prima Dark Crystal e poi "5 ORE DI DARK SOULS", non va bene
-        # same: DLC di cuphead dà prima Cuphead e poi "DLC di Cuphead rimandato al 2021 because qualità"
-        # rimuovere stopwords
-        # altra idea per i match: fare un filtro min in base allo score max, se è 100 allora falli vedere fino a 90(?), non mi serve scendere e vedere i 70, se è 80 allora posso far vedere anche gli altri ecc
-        # altra cacca: se cerco anello "compagnia dell'anello mi viene per terzo, gestire apostrofo"
         token_set = (fuzz.token_set_ratio(descr, text_input), "token_set")
         token_sort = (fuzz.token_sort_ratio(descr, text_input), "token_sort")
         if len(text_input.split(" ")) == 1:
@@ -58,16 +57,12 @@ class SearchEngine:
         else:
             max_partial = (0, "max_simple_ratio")
 
-        return max((token_set, token_sort, max_partial), key=lambda x: x[0])
+        sum_means = 0
+        for word_input in text_input.split(" "):
+            sum_means += max([fuzz.ratio(word_input, w) for w in descr.split(" ")])
 
-        # # da ponderare
-        # if best_result[0] >= 80:
-        #     return best_result
-        # else:
-        #     return (
-        #         round(best_result[0] * 0.5),
-        #         best_result[1],
-        #     )  # penalty if measure < 80
+        return int(sum_means / len(text_input)), "mean_most_similar_combo"
+
 
     @classmethod
     def scan_episode(cls, episode: Episode, normalized_text: str) -> List[TopicSnippet]:
@@ -124,19 +119,23 @@ class EpisodeHandler:
 
     @staticmethod
     def format_episode_title_line(site_url: str, title: str) -> str:
-        #TODO: assicurarsi che il pattern sia corretto a priori
-        pre_colons, post_colons = title.split(":", 1)
-        number_ep = re.findall("[0-9]+", pre_colons)
-        return f"Episodio {number_ep[0]}: <a href='{site_url}'>{post_colons}</a>"
+        try:
+            pre_colons, post_colons = title.split(":", 1)
+            number_ep = re.findall("[0-9]+", pre_colons)
+            return f"Episodio {number_ep[0]}: <a href='{site_url}'>{post_colons}</a>"
+        except Exception as e:
+            traceback.print_exc()
+            logger.error(e)
+            return ""
 
     def search_text_in_episodes(
         self, text: str, n: int, m: int, show_tech: bool = False
     ) -> str:
-        sorted_tuple_episodes, normalized_text = SearchEngine.generate_sorted_topics(
+        sorted_tuple_episodes, normalized_text, max_score = SearchEngine.generate_sorted_topics(
             self.show.episodes, text
         )
         self.word_counter.add_word(normalized_text)
-        filter_episodes = [tpl for tpl in sorted_tuple_episodes if tpl[2] > m][:n]
+        filter_episodes = [tpl for tpl in sorted_tuple_episodes if tpl[2] > int(max_score * .75)][:n]
 
         if len(filter_episodes):
             return self.format_response(filter_episodes, show_tech)

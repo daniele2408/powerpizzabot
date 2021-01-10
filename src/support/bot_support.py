@@ -238,7 +238,7 @@ class FacadeBot:
         assert update.effective_message is not None  # for mypy, real check is in decorator
 
         update.effective_message.reply_text(
-            TextRepo.MSG_START, parse_mode=ParseMode.MARKDOWN
+            TextRepo.MSG_HELP, parse_mode=ParseMode.MARKDOWN
         )
 
     @check_effective_message
