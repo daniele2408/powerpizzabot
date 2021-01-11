@@ -40,7 +40,7 @@ from support.WordCounter import WordCounter
 from support.bot_support import error_callback
 from support.decorators import restricted
 
-#TODO: encrypt ids
+#TODO: sistema gli ep. $num :
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
