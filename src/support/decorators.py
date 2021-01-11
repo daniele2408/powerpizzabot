@@ -5,8 +5,23 @@ from functools import wraps
 from support.configuration import LIST_OF_ADMINS
 from model.custom_exceptions import UpdateEffectiveMsgNotFound
 import logging
+from hashlib import sha1
+import math
 
 logger = logging.getLogger("decorators")
+
+def hash_chat_id(func: Callable) -> Callable:
+    
+    @wraps(func)
+    def wrapped_func(cls, chat_id: int, *args, **kwargs):
+        try:
+            hashed_chat_id = sha1(bytes(abs(chat_id))).hexdigest()
+            return func(cls, hashed_chat_id, *args, **kwargs)
+        except MemoryError as me:
+            logger.error(f"Chat_id {chat_id} caused a Memory Error, gonna hash bytes(1): {me}")
+            return func(cls, sha1(bytes(1)).hexdigest(), *args, **kwargs)
+
+    return wrapped_func
 
 def check_effective_message(func: Callable) -> Callable:
     

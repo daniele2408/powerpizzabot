@@ -8,6 +8,7 @@ import logging
 from support.configuration import CACHE_FILEPATH, USERS_CFG_FOLDER, config, USERS_CFG_FILEPATH
 from collections import defaultdict
 from datetime import datetime
+from support.decorators import hash_chat_id
 
 logger = logging.getLogger("model.models")
 
@@ -108,24 +109,28 @@ class UserConfig:
 class SearchConfigs:
 
     DATE_FORMAT = "%Y%m%dT%H%M%S"
-    user_data: Dict[int, UserConfig] = defaultdict(lambda: UserConfig(5, 1))
+    user_data: Dict[str, UserConfig] = defaultdict(lambda: UserConfig(5, 1))
     DUMP_FOLDER = USERS_CFG_FOLDER
     USERS_CFG_FILEPATH = USERS_CFG_FILEPATH
 
     @classmethod
-    def get_user_cfg(cls, chat_id: int) -> UserConfig:
+    @hash_chat_id
+    def get_user_cfg(cls, chat_id: str) -> UserConfig:
         return cls.user_data[chat_id]
 
     @classmethod
-    def get_user_show_first_n(cls, chat_id: int) -> int:
+    @hash_chat_id
+    def get_user_show_first_n(cls, chat_id: str) -> int:
         return cls.user_data[chat_id].n
 
     @classmethod
-    def get_user_show_min_threshold(cls, chat_id: int) -> int:
+    @hash_chat_id
+    def get_user_show_min_threshold(cls, chat_id: str) -> int:
         return cls.user_data[chat_id].m
 
     @classmethod
-    def check_if_same_value(cls, chat_id: int, value: int, field: str) -> bool:
+    @hash_chat_id
+    def check_if_same_value(cls, chat_id: str, value: int, field: str) -> bool:
         if field == "n" and cls.user_data[chat_id].n == value:
             return True
         elif field == "m" and cls.user_data[chat_id].m == value:
@@ -136,7 +141,8 @@ class SearchConfigs:
             return False
 
     @classmethod
-    def set_user_cfg(cls, chat_id: int, value: int, field: str) -> None:
+    @hash_chat_id
+    def set_user_cfg(cls, chat_id: str, value: int, field: str) -> None:
         if field == "n":
             cls.user_data[chat_id].n = value
         elif field == "m":
@@ -166,7 +172,7 @@ class SearchConfigs:
                 json.dump(cls.normalize_user_data(), f)
             return 1
         except Exception as e:
-            logger.error(e)
+            logger.error(f"Something wrong in dumping data Search Configs: {e}")
             traceback.print_exc()
             return 0
 
@@ -213,7 +219,7 @@ class SearchConfigs:
                 data = json.load(f)
 
                 for chat_id, payload in data.items():
-                    cls.user_data[int(chat_id)] = UserConfig(int(payload["n"]), int(payload["m"]))
+                    cls.user_data[chat_id] = UserConfig(int(payload["n"]), int(payload["m"]))
 
         except Exception as e:
             logger.error(e)
