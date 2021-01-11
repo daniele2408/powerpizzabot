@@ -37,13 +37,4 @@ LIST_OF_ADMINS: Set[int] = set(
 )
 MINIMUM_SCORE = 70
 
-RAW_EP_FILEPATH = os.path.join(SRC_FOLDER, config["TEST"].get("RAW_EP_FILEPATH"))
-PROCD_EP_FILEPATH = os.path.join(SRC_FOLDER, config["TEST"].get("PROCD_EP_FILEPATH"))
-THREE_RAW_EPS_FILEPATH = os.path.join(
-    SRC_FOLDER, config["TEST"].get("THREE_RAW_EPS_FILEPATH")
-)
-SNIPPET_TXT_FILEPATH = os.path.join(
-    SRC_FOLDER, config["TEST"].get("SNIPPET_TXT_FILEPATH")
-)
-
 CREATOR_TELEGRAM_ID = config["SECRET"].get("CREATOR_TELEGRAM_ID")

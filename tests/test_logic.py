@@ -99,14 +99,14 @@ class TestSearchEngine:
         set_words = {
             ("ciao", "ciao"),
             ("ciao*%$)/%$ciao", "ciao ciao"),
-            ("ne", "ne"),
-            ("La vita è bella", "la vita e bella"),
+            ("ne di a da in con su per tra fra", ""),
+            ("La vita è bella", "vita bella"),
             ("Passerà", "passera"),
             ("Corfù", "corfu"),
-            ("Ma però così proprio non si può", "ma pero cosi proprio non si puo"),
-            ("$%$=CI$$aO", "ci ao"),
+            ("Ma però così proprio non si può", "pero cosi proprio puo"),
+            ("$%$=CI$$aO", "ao"),
             ("   strippami   ", "strippami"),
-            ("niente  doppi     o tripli     o più    spazi", "niente doppi o tripli o piu spazi")
+            ("niente  doppi     o tripli     o più    spazi", "niente doppi tripli piu spazi")
         }
 
         for tuple_ in set_words:

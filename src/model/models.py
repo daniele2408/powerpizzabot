@@ -109,31 +109,31 @@ class UserConfig:
 class SearchConfigs:
 
     DATE_FORMAT = "%Y%m%dT%H%M%S"
-    user_data: Dict[str, UserConfig] = defaultdict(lambda: UserConfig(5, 1))
+    _user_data: Dict[str, UserConfig] = defaultdict(lambda: UserConfig(5, 1))
     DUMP_FOLDER = USERS_CFG_FOLDER
     USERS_CFG_FILEPATH = USERS_CFG_FILEPATH
 
     @classmethod
     @hash_chat_id
     def get_user_cfg(cls, chat_id: str) -> UserConfig:
-        return cls.user_data[chat_id]
+        return cls._user_data[chat_id]
 
     @classmethod
     @hash_chat_id
     def get_user_show_first_n(cls, chat_id: str) -> int:
-        return cls.user_data[chat_id].n
+        return cls._user_data[chat_id].n
 
     @classmethod
     @hash_chat_id
     def get_user_show_min_threshold(cls, chat_id: str) -> int:
-        return cls.user_data[chat_id].m
+        return cls._user_data[chat_id].m
 
     @classmethod
     @hash_chat_id
     def check_if_same_value(cls, chat_id: str, value: int, field: str) -> bool:
-        if field == "n" and cls.user_data[chat_id].n == value:
+        if field == "n" and cls._user_data[chat_id].n == value:
             return True
-        elif field == "m" and cls.user_data[chat_id].m == value:
+        elif field == "m" and cls._user_data[chat_id].m == value:
             return True
         elif field not in set(["n", "m"]):
             raise ValueError("Wrong config field, choose one between (n,m)")
@@ -144,16 +144,16 @@ class SearchConfigs:
     @hash_chat_id
     def set_user_cfg(cls, chat_id: str, value: int, field: str) -> None:
         if field == "n":
-            cls.user_data[chat_id].n = value
+            cls._user_data[chat_id].n = value
         elif field == "m":
-            cls.user_data[chat_id].m = value
+            cls._user_data[chat_id].m = value
         else:
             raise ValueError("User config field not valid.")
 
     @classmethod
     def normalize_user_data(cls) -> Dict:
         data = dict()
-        for chat_id, user_cfg in cls.user_data.items():
+        for chat_id, user_cfg in cls._user_data.items():
             data[chat_id] = {"n": user_cfg.n, "m": user_cfg.m}
 
         return data
@@ -219,8 +219,12 @@ class SearchConfigs:
                 data = json.load(f)
 
                 for chat_id, payload in data.items():
-                    cls.user_data[chat_id] = UserConfig(int(payload["n"]), int(payload["m"]))
+                    cls._user_data[chat_id] = UserConfig(int(payload["n"]), int(payload["m"]))
 
         except Exception as e:
             logger.error(e)
             traceback.print_exc()
+
+    @classmethod
+    def reset_user_data(cls) -> None:
+        cls._user_data.clear()

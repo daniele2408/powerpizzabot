@@ -1,9 +1,13 @@
 import os
+import sys
 os.environ["PPB_ENV"] = "unittest"
+myPath = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, myPath + '/../src/')
 from model.models import SearchConfigs, UserConfig, Episode, EpisodeTopic
 from configuration_test import PROCD_EP_FILEPATH, SRC_TEST_FOLDER
 import pytest
 import json
+from hashlib import sha1
 
 ############## fixtures ##############
 
@@ -33,11 +37,15 @@ def raw_ep():
 def run_before():
     SearchConfigs.DUMP_FOLDER = os.path.join(SRC_TEST_FOLDER, 'resources/usr_cfg_test')
     SearchConfigs.USERS_CFG_FILEPATH = os.path.join(SRC_TEST_FOLDER, 'resources/usr_cfg_test', 'users_cfg.json')
-    SearchConfigs.user_data[1] = UserConfig(5,1)
-    SearchConfigs.user_data[2] = UserConfig(10,30)
-    SearchConfigs.user_data[3] = UserConfig(3,90)
+    SearchConfigs.set_user_cfg(1, 5, 'n')
+    SearchConfigs.set_user_cfg(1, 1, 'm')
+    SearchConfigs.set_user_cfg(2, 10, 'n')
+    SearchConfigs.set_user_cfg(2, 30, 'm')
+    SearchConfigs.set_user_cfg(3, 3, 'n')
+    SearchConfigs.set_user_cfg(3, 90, 'm')
+    
     yield
-    SearchConfigs.user_data.clear()
+    SearchConfigs.reset_user_data()
     filelist = [f for f in os.listdir(SearchConfigs.DUMP_FOLDER)]
     for f in filelist:
         os.remove(os.path.join(SearchConfigs.DUMP_FOLDER, f))
@@ -153,26 +161,37 @@ def test_normalize_user_data():
 
     data = SearchConfigs.normalize_user_data()
 
-    assert data[1]['n'] == SearchConfigs.get_user_show_first_n(1)
-    assert data[1]['m'] == SearchConfigs.get_user_show_min_threshold(1)
+    one_hashed = sha1(bytes(1)).hexdigest()
+    two_hashed = sha1(bytes(2)).hexdigest()
+    three_hashed = sha1(bytes(3)).hexdigest()
 
-    assert data[2]['n'] == SearchConfigs.get_user_show_first_n(2)
-    assert data[2]['m'] == SearchConfigs.get_user_show_min_threshold(2)
+    assert data[one_hashed]['n'] == SearchConfigs.get_user_show_first_n(1)
+    assert data[one_hashed]['m'] == SearchConfigs.get_user_show_min_threshold(1)
 
-    assert data[3]['n'] == SearchConfigs.get_user_show_first_n(3)
-    assert data[3]['m'] == SearchConfigs.get_user_show_min_threshold(3)
+    assert data[two_hashed]['n'] == SearchConfigs.get_user_show_first_n(2)
+    assert data[two_hashed]['m'] == SearchConfigs.get_user_show_min_threshold(2)
+
+    assert data[three_hashed]['n'] == SearchConfigs.get_user_show_first_n(3)
+    assert data[three_hashed]['m'] == SearchConfigs.get_user_show_min_threshold(3)
 
 def test_dump_data():
 
-    SearchConfigs.dump_data()
-
-    SearchConfigs.user_data[1] = UserConfig(10, 20)
-    SearchConfigs.user_data[2] = UserConfig(30, 40)
+    one_hashed = sha1(bytes(1)).hexdigest()
+    two_hashed = sha1(bytes(2)).hexdigest()
 
     SearchConfigs.dump_data()
 
-    SearchConfigs.user_data[1] = UserConfig(999, 998)
-    SearchConfigs.user_data[2] = UserConfig(111, 112)
+    SearchConfigs.set_user_cfg(1, 10, 'n')
+    SearchConfigs.set_user_cfg(1, 20, 'm')
+    SearchConfigs.set_user_cfg(2, 30, 'n')
+    SearchConfigs.set_user_cfg(2, 40, 'm')
+
+    SearchConfigs.dump_data()
+
+    SearchConfigs.set_user_cfg(1, 999, 'n')
+    SearchConfigs.set_user_cfg(1, 998, 'm')
+    SearchConfigs.set_user_cfg(2, 111, 'n')
+    SearchConfigs.set_user_cfg(2, 112, 'm')
 
     assert SearchConfigs.get_user_show_first_n(1) == 999
     assert SearchConfigs.get_user_show_min_threshold(1) == 998
