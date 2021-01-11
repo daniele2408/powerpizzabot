@@ -15,7 +15,7 @@ Data: {}
 
     MSG_NOT_VALID_INPUT = "Il valore inviato non ha un formato corretto, inserire un numero intero appartenente all'intervallo previsto."
     MSG_NOT_VALID_DATE = "Le date immesse non hanno formato corretto - inserire DDMMYY oppure DDMMYY DDMMYY"
-    MSG_NOT_VALID_RANGE = "Il valore inviato non è nell'intervallo previsto [{},{}]."
+    MSG_NOT_VALID_RANGE = "Il valore inviato non è nell'intervallo previsto da {} a {} entrambi inclusi."
 
     MSG_SAME_VALUE = "Il numero di risultati mostrati è già pari a {}."
     MSG_SET_MIN_SCORE = "Ho impostato {}% come soglia minima di match score."
