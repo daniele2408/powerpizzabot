@@ -78,9 +78,7 @@ def main():
 
     dp = updater.dispatcher
     dp.add_handler(CommandHandler("s", facade_bot.search))
-    # dp.add_handler(CommandHandler("min", facade_bot.set_minimum_score))  # hidden for now
     dp.add_handler(CommandHandler("top", facade_bot.set_top_results))
-    # dp.add_handler(CommandHandler("mycfg", facade_bot.show_my_config))  # hidden for now
     dp.add_handler(
         CommandHandler(
             "dump", facade_bot.dump_data, filters=Filters.user(username=CREATOR_TELEGRAM_ID)
