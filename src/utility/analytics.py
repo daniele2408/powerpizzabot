@@ -27,7 +27,7 @@ class AnalyticsBackend:
         self.call_counter = call_counter
 
     def get_users_total_n(self) -> int:
-        return len(SearchConfigs.user_data)
+        return len(SearchConfigs._user_data)
 
     def get_word_counter_top_n(self, n: int) -> List[Tuple[str, int]]:
         return self.word_counter.counter.most_common(n)
