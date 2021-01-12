@@ -20,10 +20,10 @@ Il bot mostrerà tutti i risultati abbastanza simili al testo ricercato, riporta
 
 Esaminando il codice potreste notare che utilizzo i chat_id degli utenti Telegram per mantenere una configurazione utente e per ricavare il numero di utenti che hanno utilizzato il bot. 
 
-Nel fare questo offusco in maniera non reversibile i chat_id, in modo da conservarne solamente un hash per i sopracitati motivi preservando allo stesso tempo l'identità di chi utilizza il bot.
+Nel fare questo offusco in maniera non reversibile i chat_id, in modo da conservarne solamente un hash per i sopracitati motivi, preservando allo stesso tempo l'identità di chi utilizza il bot.
 
-## 🎵 Toss a coin to your Witcher 🎵
+## 🎵 ...oh valle abbondante 🎵
 
-Il progetto è totalmente senza scopo di lucro ed è stato realizzato sia per soddisfazione personale che per tributo al podcast 🍕 se volete però contribuire alle comunque modiche spese di hosting del bot potete offrirmi una birra cliccando sul bottoncino a seguire!
+Il progetto è ovviamente senza scopo di lucro ed è stato realizzato sia per soddisfazione personale che per tributo al podcast 🍕 se volete però contribuire alle modiche spese di hosting del bot potete offrirmi una birra cliccando sul pulsante a seguire.
 
 [![paypal](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/paypalme/heyitsmedaniele)
