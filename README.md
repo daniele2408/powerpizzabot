@@ -12,7 +12,7 @@ Per trovare in quali episodi si è parlato di un determinato argomento, inviare
 
 ad esempio come mostrato nello screenshot a seguire in cui cerco "dark souls"
 
-![alt text](https://github.com/daniele2408/powerpizzabot/blob/master/resources/screenshot_search.png?raw=true)
+![search example](https://github.com/daniele2408/powerpizzabot/blob/master/resources/screenshot_search.png?raw=true)
 
 Il bot mostrerà tutti i risultati abbastanza simili al testo ricercato, riportando sia il link del topic che il link all'episodio stesso.
 
