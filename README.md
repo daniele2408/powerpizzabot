@@ -20,7 +20,7 @@ Il bot mostrerà tutti i risultati abbastanza simili al testo ricercato, riporta
 
 Esaminando il codice potreste notare che utilizzo i chat_id degli utenti Telegram per mantenere una configurazione utente e per ricavare il numero di utenti che hanno utilizzato il bot. 
 
-Nel fare questo offusco in maniera non reversibile i chat_id, in modo da conservarne solamente un hash per i sopracitati motivi, preservando allo stesso tempo l'identità di chi utilizza il bot.
+Nel fare questo però offusco in maniera non reversibile i chat_id, in modo da conservarne solamente un hash per i sopracitati motivi, preservando allo stesso tempo l'identità di chi utilizza il bot.
 
 ## 🎵 ...oh valle abbondante 🎵
 
