@@ -14,7 +14,7 @@ ad esempio come mostrato nello screenshot a seguire in cui cerco "dark souls"
 
 ![search example](https://github.com/daniele2408/powerpizzabot/blob/master/resources/screenshot_search.png?raw=true)
 
-Il bot mostrerà tutti i risultati abbastanza simili al testo ricercato, riportando sia il link del topic che il link all'episodio stesso.
+Il bot mostrerà i risultati più simili al testo ricercato, riportando sia il link del topic che il link all'episodio stesso.
 
 ## Trattamento dei dati
 

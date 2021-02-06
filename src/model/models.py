@@ -59,7 +59,7 @@ class Episode:
 
     def populate_topics(self) -> None:
         ls_tuples_label_url = re.findall(
-            "((\\n|\\r\\n).+(\\n|\\r\\n)http(|s).+(\\n|\\r\\n|$))", self.description_raw
+            "((\\n|\\r\\n).+(\\n|\\r\\n)(http(|s)|@).+(\\n|\\r\\n|$))", self.description_raw
         )
 
         for label_url_tuple in ls_tuples_label_url:

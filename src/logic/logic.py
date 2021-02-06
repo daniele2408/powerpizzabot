@@ -166,7 +166,7 @@ class EpisodeHandler:
             ep = self.show.get_episode(tuple_[0])
             score = f"SCORE {tuple_[2]}" if admin_req else ""
             topic_url = tuple_[4]
-            topic_label = tuple_[1].label
+            topic_label = tuple_[1].label if topic_url != "@PowerPizzaSearchBot" else tuple_[1].label + " <i>(hey, that's me!)</i>"
             max_score = tuple_[5]
             episode_line = self.format_episode_title_line(ep.site_url, ep.title)
             date = self.convert_to_italian_date_format(ep.published_at)
