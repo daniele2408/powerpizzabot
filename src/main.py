@@ -77,6 +77,9 @@ def main():
     dp = updater.dispatcher
     dp.add_handler(CommandHandler("s", facade_bot.search))
     dp.add_handler(CommandHandler("top", facade_bot.set_top_results))
+    dp.add_handler(CommandHandler("last", facade_bot.get_last_ep))
+    dp.add_handler(CommandHandler("get", facade_bot.get_ep))
+    dp.add_handler(CommandHandler("host", facade_bot.get_eps_host))
     dp.add_handler(
         CommandHandler(
             "dump", facade_bot.dump_data, filters=Filters.user(username=CREATOR_TELEGRAM_ID)
@@ -90,7 +93,6 @@ def main():
     dp.add_handler(CommandHandler("qry", facade_bot.get_daily_logs, filters=Filters.user(username=CREATOR_TELEGRAM_ID)))
     
     dp.add_handler(CommandHandler("memo", facade_bot.memo, filters=Filters.user(username=CREATOR_TELEGRAM_ID)))
-
 
     dp.add_handler(CommandHandler("start", facade_bot.start))
     dp.add_handler(CommandHandler("help", facade_bot.help))

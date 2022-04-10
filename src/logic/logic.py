@@ -36,7 +36,7 @@ class SearchEngine:
         normalized_text = cls.normalize_string(text)
 
         if not normalized_text:
-            raise ValueNotValid("Il testo inviato non contiene caratteri alfanumerici oppure non contiene parole significative, ricerca annullata.")
+            raise ValueNotValid("Il testo inviato non contiene caratteri alfanumerici né parole significative, nessun risultato ottenuto.")
 
         for ep in episodes.values():
             episodes_topic.extend(cls.scan_episode(ep, normalized_text))
@@ -87,7 +87,6 @@ class SearchEngine:
                 (episode.episode_id, topic, match_score, technique, topic.url, max_score)
             )
         return ls_res
-
 
 
 class EpisodeHandler:
@@ -215,4 +214,43 @@ class EpisodeHandler:
 
     def save_searches(self, *args):
         return self.word_counter.dump_counter()
+
+    def get_last_episode(self) -> str:
+        return self.format_single_episode(self.show.get_last_episode())
+
+    def get_last_episode_number(self) -> int:
+        last_ep: Episode = self.show.get_last_episode()
+        return last_ep.number
+
+    def format_single_episode(self, ep: Episode) -> str:
+        msg = f"Episodio {ep.number}: {ep.title_str} ({self.convert_to_italian_date_format(ep.published_at)})\n\n"
+        msg_description = f"{ep.description_raw}\n--------------------------------\n"
+
+        return msg + msg_description
+
+    def get_episode(self, number_ep: int) -> str:
+        return self.format_single_episode(self.show.get_episode_by_number(number_ep))
+
+    def get_host_map(self) -> str:
+
+        sorted_host_count_tuples = list(sorted(
+            [(k, v) for k, v in self.show.hosts_eps_map.items()],
+            key=lambda x: (len(x[1]), max(x[1]))
+        ))
+        msg = ""
+        for host, eps in sorted_host_count_tuples:
+            tot_eps = len(eps)
+            ls_eps = f"({self.show_max_tot_set_element(eps)}{'...' if tot_eps > 5 else ''})\n"
+            msg += f"{host} presente in {tot_eps} episodi{'o' if tot_eps == 1 else ''} " + ls_eps
+
+        return msg
+
+    @staticmethod
+    def show_max_tot_set_element(s: Set) -> str:
+        elements = []
+        ls = sorted(list(s), reverse=True)
+        for e in ls[:min(5, len(s))]:
+            elements.append(str(e))
+        return ", ".join(elements)
+
 

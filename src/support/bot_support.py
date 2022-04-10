@@ -102,7 +102,10 @@ class FacadeBot:
         if not is_admin:
             self.call_counter.add_call()
         if not context.args:
-            raise ArgumentListEmpty("No arguments sent.")
+            update.effective_message.reply_text(
+                TextRepo.MSG_SEARCH_EMPTY_INPUT
+            )
+            return
 
         text: List[str] = context.args
         user_cfg: UserConfig = SearchConfigs.get_user_cfg(chat_id)
@@ -117,7 +120,11 @@ class FacadeBot:
 
     @staticmethod
     def sanitize_digit(args, min_: Union[int, float], max_: Union[int, float]) -> int:
-        res = re.compile("^[0-9]+$").match(" ".join(args))
+        join_args = " ".join(args)
+        if join_args == "":
+            raise ValueNotValid(TextRepo.MSG_TOP_EMPTY_INPUT)
+
+        res = re.compile("^[0-9]+$").match(join_args)
         if res is None:
             raise ValueNotValid(TextRepo.MSG_NOT_VALID_INPUT)
         else:
@@ -138,9 +145,9 @@ class FacadeBot:
                 day = int(date[:2])
                 month = int(date[2:4])
                 year = int(date[4:])
-                is_day = day > 0 and day <= 31
-                is_month = month > 0 and month <= 12
-                is_year = year > 0 and year <= 99
+                is_day = 0 < day <= 31
+                is_month = 0 < month <= 12
+                is_year = 0 < year <= 99
                 if any({not is_day, not is_month, not is_year}):
                     raise ValueNotValid(TextRepo.MSG_NOT_VALID_DATE)
                 timestamps.append(int(datetime(year=2000+year, month=month, day=day, tzinfo=timezone.utc).timestamp()))
@@ -186,6 +193,53 @@ class FacadeBot:
             update.effective_message.reply_text(
                 TextRepo.MSG_SET_FIRST_N.format(value)
             )
+
+    @check_effective_message
+    def get_last_ep(self, update: Update, context: CallbackContext) -> None:
+        assert update.effective_message is not None  # for mypy, real check is in decorator
+
+        chat_id = update.effective_message.chat_id
+        is_admin = self.is_admin(chat_id)
+        if not is_admin:
+            self.call_counter.add_call()
+
+        msg_last_ep = self.episode_handler.get_last_episode()
+
+        update.effective_message.reply_text(
+            msg_last_ep, parse_mode=ParseMode.HTML, disable_web_page_preview=True
+        )
+
+    @check_effective_message
+    def get_ep(self, update: Update, context:CallbackContext) -> None:
+        assert update.effective_message is not None  # for mypy, real check is in decorator
+
+        chat_id = update.effective_message.chat_id
+        is_admin = self.is_admin(chat_id)
+        if not is_admin:
+            self.call_counter.add_call()
+
+        last_ep_number = self.episode_handler.get_last_episode_number()
+
+        value = self.sanitize_digit(context.args, 1, last_ep_number)
+
+        if value != -1:
+
+            msg = self.episode_handler.get_episode(value)
+
+            update.effective_message.reply_text(
+                msg, disable_web_page_preview=True
+            )
+
+    @check_effective_message
+    def get_eps_host(self, update: Update, context:CallbackContext) -> None:
+        assert update.effective_message is not None  # for mypy, real check is in decorator
+
+        msg = self.episode_handler.get_host_map()
+
+        update.effective_message.reply_text(
+            msg
+        )
+
 
     @check_effective_message
     def show_my_config(self, update: Update, context: CallbackContext) -> None:

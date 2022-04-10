@@ -1,6 +1,6 @@
 import os
 import json
-import pathlib
+from collections import defaultdict
 import traceback
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 import re
@@ -9,13 +9,16 @@ from support.configuration import CACHE_FILEPATH, USERS_CFG_FOLDER, config, USER
 from collections import defaultdict
 from datetime import datetime
 from support.decorators import hash_chat_id
+from unidecode import unidecode
 
 logger = logging.getLogger("model.models")
+
 
 class EpisodeTopic:
     def __init__(self, label: str, url: str) -> None:
         self.label = label
         self.url = url
+
 
 class Episode:
     def __init__(
@@ -32,6 +35,9 @@ class Episode:
         self.site_url = site_url
         self.description_raw = description_raw
         self.topics: List[EpisodeTopic] = []
+        self.number: int = self.parse_ep_number()
+        self.title_str: str = self.parse_ep_title()
+        self.hosts: List[str] = self.parse_hosts()
 
     def to_dict(self) -> Dict[str, Union[str, List[Dict[str, str]]]]:
         return {
@@ -78,10 +84,56 @@ class Episode:
                 label, url = procd_tuple
                 self.topics.append(EpisodeTopic(label, url))
 
+    def parse_ep_number(self) -> int:
+        match_regex = re.match('^(ep.[0-9]+:|[0-9]+:)', self.title)
+        if match_regex:
+            parsed_match = match_regex.group(0)
+            parsed_match = re.search('[0-9]+', parsed_match).group(0)
+            parsed_match = parsed_match.replace('.ep', '')
+            return int(parsed_match)
+        else:
+            return -1
+
+    def parse_ep_title(self) -> str:
+        return self.title.split(':')[-1]
+
+    @classmethod
+    def normalize_string(cls, s: str) -> str:
+        s = unidecode(s.lower())
+        s = re.sub("[^A-Za-z0-9 ]+", " ", s)
+        s = re.sub("[ ]+", " ", s).strip()
+
+        return s
+
+    def parse_hosts(self) -> List[str]:
+        try:
+            search = re.search('Con:.+', self.description_raw)
+            if ksearch:
+                return self.reduce_string_hosts_to_list(search.group(0))
+        except Exception as e:
+            traceback.print_exc()
+            logger.error(e)
+        return []
+
+    @staticmethod
+    def reduce_string_hosts_to_list(hosts_str: str) -> List[str]:
+        str_wo_con = hosts_str.split(':')[-1]
+
+        hosts = list()
+
+        for token1 in str_wo_con.split(','):
+            for token2 in token1.split(' e '):
+                for token3 in token2.split('&'):
+                    hosts.append(token3)
+
+        return [host.strip() for host in hosts]
+
+
 class Show:
     def __init__(self, show_id: str) -> None:
         self.show_id = show_id
         self._episodes: Dict[str, Episode] = dict()
+        self.hosts_eps_map: Dict[str, set] = defaultdict(set)
 
     @property
     def episodes(self) -> Dict[str, Episode]:
@@ -93,12 +145,25 @@ class Show:
         # not a proper setter implementation, more like add, fix it
         for episode in episodes.values():
             self._episodes[episode.episode_id] = episode
+            for host in episode.hosts:
+                try:
+                    self.hosts_eps_map[host].add(episode.number)
+                except Exception as e:
+                    traceback.print_exc()
+                    logger.error(e)
+
 
     def get_episode(self, episode_id: str) -> Episode:
         return self._episodes[episode_id]
 
     def get_episode_ids(self) -> Set[str]:
         return set(self._episodes.keys())
+
+    def get_last_episode(self) -> Episode:
+        return self._episodes[max(self._episodes.keys())]
+
+    def get_episode_by_number(self, number: int) -> Episode:
+        return next(filter(lambda ep: ep.number == number, self._episodes.values()), None)
 
 class UserConfig:
     def __init__(self, n, m):

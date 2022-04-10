@@ -14,6 +14,8 @@ Data: {}
     )
 
     MSG_NOT_VALID_INPUT = "Il valore inviato non ha un formato corretto, inserire un numero intero appartenente all'intervallo previsto."
+    MSG_SEARCH_EMPTY_INPUT = "Hai inviato il comando senza nessuna parola da ricercare!"
+    MSG_TOP_EMPTY_INPUT = "Hai inviato il comando senza nessun numero da impostare!"
     MSG_NOT_VALID_DATE = "Le date immesse non hanno formato corretto - inserire DDMMYY oppure DDMMYY DDMMYY"
     MSG_NOT_VALID_RANGE = "Il valore inviato non è nell'intervallo previsto da {} a {} entrambi inclusi."
 
@@ -34,6 +36,8 @@ oppure qualsiasi altro argomento ti venga in mente.
     MSG_HELP = """
  `/s <testo>`\nper ricercare un argomento tra quelli elencati negli scontrini delle puntate.\n
  `/top <n>`\nper far apparire solo i primi n messaggi nella ricerca.\n
+ `/last`\nmostra gli argomenti dell'ultimo episodio raccolto dal bot.\n
+ `/get <n>`\nmostra gli argomenti dell'episodio avente il numero richiesto.\n
     """
 
     MSG_TOT_USERS = "{} utenti hanno usato finora il bot."
@@ -49,3 +53,5 @@ oppure qualsiasi altro argomento ti venga in mente.
 `/ncw $n`\nparole più cercate\n
 `/qry $from [$to]`\nlog giornalieri da DDMMYY a oggi, oppure a DDMMYY\n
 """
+
+    MSG_SINGLE_TOPIC = '<a href="{}">{}</a>'
