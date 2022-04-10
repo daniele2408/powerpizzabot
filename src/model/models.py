@@ -108,7 +108,7 @@ class Episode:
     def parse_hosts(self) -> List[str]:
         try:
             search = re.search('Con:.+', self.description_raw)
-            if ksearch:
+            if search:
                 return self.reduce_string_hosts_to_list(search.group(0))
         except Exception as e:
             traceback.print_exc()
