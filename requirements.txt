@@ -14,6 +14,7 @@ iniconfig==1.1.1
 mypy==0.790
 mypy-extensions==0.4.3
 packaging==20.8
+phonetics==1.0.5
 pluggy==0.13.1
 py==1.10.0
 pycparser==2.20
