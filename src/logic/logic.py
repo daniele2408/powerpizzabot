@@ -1,3 +1,5 @@
+import random
+
 from model.models import Episode
 from datetime import datetime
 import re
@@ -147,7 +149,7 @@ class EpisodeHandler:
         )
         if not is_admin:
             self.word_counter.add_word(normalized_text)
-            
+
         filter_episodes = [tpl for tpl in sorted_tuple_episodes if tpl[5] >= m and tpl[2] >= max_score * .75][:n]
 
         if len(filter_episodes):
@@ -203,7 +205,7 @@ class EpisodeHandler:
                 n_last_episodes += 1
             else:  # we have all but the last one, we gucci
                 logger.info(f"Adding {n_last_episodes-1} new episodes!")
-                
+
                 new_episodes = last_episodes[:-1]
                 procd_episodes = self.process_raw_episodes(new_episodes)
 
@@ -231,26 +233,43 @@ class EpisodeHandler:
     def get_episode(self, number_ep: int) -> str:
         return self.format_single_episode(self.show.get_episode_by_number(number_ep))
 
-    def get_host_map(self) -> str:
+    def get_not_numbered_episode(self) -> str:
+        episodes = self.show.get_not_numbered_episodes()
+        return self.format_single_episode(random.choice(episodes))
+
+    def get_host_map(self, sort_order:str = "abc") -> str:
+
+        if sort_order == "frequency":
+            sort_f = lambda x: (len(x[1]), max(x[1]))
+        elif sort_order == "abc":
+            sort_f = lambda x: x[0].most_common(1)[0][0].lower()
+        elif sort_order == "first_appear":
+            sort_f = lambda x: (min(x[1]), x[0].most_common(1)[0][0].lower())
+        else:
+            sort_f = lambda x: (len(x[1]), max(x[1]))
 
         sorted_host_count_tuples = list(sorted(
-            [(k, v) for k, v in self.show.hosts_eps_map.items()],
-            key=lambda x: (len(x[1]), max(x[1]))
+            [(v['names'], v['episodes']) for k, v in self.show.hosts_eps_map.items() if k != ''],
+            key=sort_f
         ))
         msg = ""
-        for host, eps in sorted_host_count_tuples:
+        for host_names, eps in sorted_host_count_tuples:
+            first_two = host_names.most_common(2)
+            host = first_two[0][0]
+            alias_host = ''
+            if len(first_two) > 1 and host.lower() != first_two[1][0].lower():
+                alias_host = f'(AKA {first_two[1][0]}) '
+
             tot_eps = len(eps)
-            ls_eps = f"({self.show_max_tot_set_element(eps)}{'...' if tot_eps > 5 else ''})\n"
-            msg += f"{host} presente in {tot_eps} episodi{'o' if tot_eps == 1 else ''} " + ls_eps
+            ls_eps = f"({self.show_max_tot_set_element(eps, sort_order)}{'...' if tot_eps > 5 else ''})\n"
+            msg += f"{host} {alias_host}presente in {tot_eps} episodi{'o' if tot_eps == 1 else ''} " + ls_eps
 
         return msg
 
     @staticmethod
-    def show_max_tot_set_element(s: Set) -> str:
+    def show_max_tot_set_element(s: Set, sort_order: str) -> str:
         elements = []
-        ls = sorted(list(s), reverse=True)
+        ls = sorted(list(s), reverse=(sort_order != "first_appear"))
         for e in ls[:min(5, len(s))]:
             elements.append(str(e))
         return ", ".join(elements)
-
-

@@ -1,10 +1,13 @@
 import os
 import json
-from collections import defaultdict
+from collections import defaultdict, Counter
 import traceback
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 import re
 import logging
+
+import fuzzywuzzy.fuzz
+import phonetics
 from support.configuration import CACHE_FILEPATH, USERS_CFG_FOLDER, config, USERS_CFG_FILEPATH
 from collections import defaultdict
 from datetime import datetime
@@ -33,7 +36,7 @@ class Episode:
         self.title = title
         self.published_at = published_at
         self.site_url = site_url
-        self.description_raw = description_raw
+        self.description_raw = description_raw.replace('Lorro Sio', 'Lorro, Sio')
         self.topics: List[EpisodeTopic] = []
         self.number: int = self.parse_ep_number()
         self.title_str: str = self.parse_ep_title()
@@ -85,7 +88,8 @@ class Episode:
                 self.topics.append(EpisodeTopic(label, url))
 
     def parse_ep_number(self) -> int:
-        match_regex = re.match('^(ep.[0-9]+:|[0-9]+:)', self.title)
+        title_no_blanks = re.sub('[ ]+', '', self.title)
+        match_regex = re.match('^(ep.[0-9]+:|[0-9]+:)', title_no_blanks)
         if match_regex:
             parsed_match = match_regex.group(0)
             parsed_match = re.search('[0-9]+', parsed_match).group(0)
@@ -96,14 +100,6 @@ class Episode:
 
     def parse_ep_title(self) -> str:
         return self.title.split(':')[-1]
-
-    @classmethod
-    def normalize_string(cls, s: str) -> str:
-        s = unidecode(s.lower())
-        s = re.sub("[^A-Za-z0-9 ]+", " ", s)
-        s = re.sub("[ ]+", " ", s).strip()
-
-        return s
 
     def parse_hosts(self) -> List[str]:
         try:
@@ -133,7 +129,10 @@ class Show:
     def __init__(self, show_id: str) -> None:
         self.show_id = show_id
         self._episodes: Dict[str, Episode] = dict()
-        self.hosts_eps_map: Dict[str, set] = defaultdict(set)
+        self.vacant_episode_index = -1
+        self.hosts_eps_map = defaultdict(
+            lambda: {'names': Counter(), 'episodes': set()}
+        )
 
     @property
     def episodes(self) -> Dict[str, Episode]:
@@ -144,14 +143,11 @@ class Show:
     def set_episodes(self, episodes: Dict[str, Episode]) -> None:
         # not a proper setter implementation, more like add, fix it
         for episode in episodes.values():
+            if episode.number == -1:
+                episode.number = self.vacant_episode_index
+                self.vacant_episode_index -= 1
             self._episodes[episode.episode_id] = episode
-            for host in episode.hosts:
-                try:
-                    self.hosts_eps_map[host].add(episode.number)
-                except Exception as e:
-                    traceback.print_exc()
-                    logger.error(e)
-
+            self.set_hosts_from_episode(episode)
 
     def get_episode(self, episode_id: str) -> Episode:
         return self._episodes[episode_id]
@@ -164,6 +160,21 @@ class Show:
 
     def get_episode_by_number(self, number: int) -> Episode:
         return next(filter(lambda ep: ep.number == number, self._episodes.values()), None)
+
+    def get_not_numbered_episodes(self) -> List[Episode]:
+        return list(filter(lambda ep: ep.number < 0, self._episodes.values()))
+
+    def set_hosts_from_episode(self, episode: Episode):
+        for host in episode.hosts:
+            try:
+                first_token = host.lower().split(' ')[0]
+                first_token = Utils.normalize_string(first_token, True)
+                phonema = phonetics.soundex(first_token)
+                self.hosts_eps_map[phonema]['episodes'].add(episode.number)
+                self.hosts_eps_map[phonema]['names'][host] += 1
+            except Exception as e:
+                traceback.print_exc()
+                logger.error(f'Errore per host {host}: {e}')
 
 class UserConfig:
     def __init__(self, n, m):
@@ -200,7 +211,7 @@ class SearchConfigs:
             return True
         elif field == "m" and cls._user_data[chat_id].m == value:
             return True
-        elif field not in set(["n", "m"]):
+        elif field not in {"n", "m"}:
             raise ValueError("Wrong config field, choose one between (n,m)")
         else:
             return False
@@ -293,3 +304,15 @@ class SearchConfigs:
     @classmethod
     def reset_user_data(cls) -> None:
         cls._user_data.clear()
+
+class Utils:
+
+    @classmethod
+    def normalize_string(cls, s: str, remove_whitespace: Optional[bool]= False) -> str:
+        s = unidecode(s.lower())
+        s = re.sub("[^A-Za-z0-9 ]+", " ", s)
+        s = re.sub("[ ]+", " ", s).strip()
+        if remove_whitespace:
+            s = re.sub(" ", "", s).strip()
+
+        return s

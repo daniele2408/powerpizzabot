@@ -1,3 +1,5 @@
+import random
+
 from telegram.ext import messagequeue as mq
 from model.custom_exceptions import ValueNotValid, ValueOutOfRange, StatusCodeNot200, UpdateEffectiveMsgNotFound, ArgumentListEmpty
 from model.models import SearchConfigs
@@ -78,6 +80,13 @@ def handle_text_messages(update: Update, context: CallbackContext) -> None:
 
 
 class FacadeBot:
+
+    dict_host_order = {
+        "/host": "abc",
+        "/hostf": "frequency",
+        "/hosta": "first_appear"
+    }
+
     def __init__(self, episode_handler: EpisodeHandler) -> None:
         self.episode_handler = episode_handler
         self.call_counter = CallCounter()
@@ -220,6 +229,15 @@ class FacadeBot:
 
         last_ep_number = self.episode_handler.get_last_episode_number()
 
+        if len(context.args) == 1 and context.args[0].lower() == 'lucky':
+            msg = self.episode_handler.get_not_numbered_episode()
+
+            update.effective_message.reply_text(
+                msg, disable_web_page_preview=True
+            )
+            return
+
+
         value = self.sanitize_digit(context.args, 1, last_ep_number)
 
         if value != -1:
@@ -231,10 +249,33 @@ class FacadeBot:
             )
 
     @check_effective_message
+    def get_ep_random(self, update: Update, context:CallbackContext) -> None:
+        assert update.effective_message is not None  # for mypy, real check is in decorator
+
+        chat_id = update.effective_message.chat_id
+        is_admin = self.is_admin(chat_id)
+        if not is_admin:
+            self.call_counter.add_call()
+
+        last_ep_number: int = self.episode_handler.get_last_episode_number()
+
+        if random.random() <= 0.016:
+            msg = "Fortuna! Hai pescato un raro episodio non numerato!\n"
+            msg += self.episode_handler.get_not_numbered_episode()
+        else:
+            rand_ep = random.randint(1, last_ep_number)
+            msg = self.episode_handler.get_episode(rand_ep)
+
+        update.effective_message.reply_text(
+            msg, disable_web_page_preview=True
+        )
+
+    @check_effective_message
     def get_eps_host(self, update: Update, context:CallbackContext) -> None:
         assert update.effective_message is not None  # for mypy, real check is in decorator
 
-        msg = self.episode_handler.get_host_map()
+        command_text = update.effective_message.text
+        msg = self.episode_handler.get_host_map(self.dict_host_order.get(command_text, "abc"))
 
         update.effective_message.reply_text(
             msg

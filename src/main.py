@@ -79,7 +79,10 @@ def main():
     dp.add_handler(CommandHandler("top", facade_bot.set_top_results))
     dp.add_handler(CommandHandler("last", facade_bot.get_last_ep))
     dp.add_handler(CommandHandler("get", facade_bot.get_ep))
+    dp.add_handler(CommandHandler("random", facade_bot.get_ep_random))
     dp.add_handler(CommandHandler("host", facade_bot.get_eps_host))
+    dp.add_handler(CommandHandler("hostf", facade_bot.get_eps_host))
+    dp.add_handler(CommandHandler("hosta", facade_bot.get_eps_host))
     dp.add_handler(
         CommandHandler(
             "dump", facade_bot.dump_data, filters=Filters.user(username=CREATOR_TELEGRAM_ID)
