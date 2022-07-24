@@ -189,20 +189,22 @@ class TestEpisodeHandler:
         title_b = "ep 120: Hard Chiacchiere feat. Kenobit"
         title_c = " ep 120: Hard Chiacchiere feat. Kenobit"
         title_d = "ep 120 : Hard Chiacchiere feat. Kenobit"
+        title_e = "ep 120c: Hard Chiacchiere feat. Kenobit"
 
         url = "unurlacaso"
 
         expected = "Episodio 120: <a href='unurlacaso'> Hard Chiacchiere feat. Kenobit</a>"
 
-        res_a = episode_handler.format_episode_title_line(url, title_a)
-        res_b = episode_handler.format_episode_title_line(url, title_b)
-        res_b = episode_handler.format_episode_title_line(url, title_c)
-        res_b = episode_handler.format_episode_title_line(url, title_d)
+        res_a = episode_handler.format_episode_title_line(url, title_a, 120, '')
+        res_b = episode_handler.format_episode_title_line(url, title_b, 120, '')
+        res_c = episode_handler.format_episode_title_line(url, title_d, 120, 'c')
 
         assert expected == res_a
         assert expected == res_b
-        assert expected == res_b
-        assert expected == res_b
+
+        expected = "Episodio 120c: <a href='unurlacaso'> Hard Chiacchiere feat. Kenobit</a>"
+
+        assert expected == res_c
 
     def test_format_response(self, episode_procd, episode_handler):
 

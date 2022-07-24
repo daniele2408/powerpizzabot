@@ -144,6 +144,29 @@ class FacadeBot:
                 return value
 
     @staticmethod
+    def sanitize_digit_and_subletter(args, min_: Union[int, float], max_: Union[int, float]) -> Tuple[int, str]:
+        join_args = " ".join(args)
+        if join_args == "":
+            raise ValueNotValid(TextRepo.MSG_TOP_EMPTY_INPUT)
+
+        res = re.compile("^[0-9]+(|[a-z])$").match(join_args)
+        if res is None:
+            raise ValueNotValid(TextRepo.MSG_NOT_VALID_INPUT)
+        else:
+            res_match = res.group(0)
+            int_value = re.compile("[0-9]+").match(res_match)
+            if int_value is None:
+                raise ValueNotValid(TextRepo.MSG_NOT_VALID_INPUT)
+            subnumber_value = re.search('[a-z]', join_args)
+            subnumber_value = '' if subnumber_value is None else subnumber_value.group(0)
+            value = int(int_value.group(0))
+            if min_ > value or max_ < value:
+                raise ValueOutOfRange(TextRepo.MSG_NOT_VALID_RANGE.format(min_, max_))
+            else:
+                return value, subnumber_value
+
+
+    @staticmethod
     def sanitize_dates(args) -> List[int]:
         res = re.findall(r"[0-9]{6}", " ".join(args))
         if not len(res) and len(res[0]) == len(res[1]) == 6 :
@@ -215,7 +238,7 @@ class FacadeBot:
         msg_last_ep = self.episode_handler.get_last_episode()
 
         update.effective_message.reply_text(
-            msg_last_ep, disable_web_page_preview=True
+            msg_last_ep, disable_web_page_preview=True, parse_mode=ParseMode.HTML
         )
 
     @check_effective_message
@@ -233,19 +256,18 @@ class FacadeBot:
             msg = self.episode_handler.get_not_numbered_episode()
 
             update.effective_message.reply_text(
-                msg, disable_web_page_preview=True
+                msg, disable_web_page_preview=True, parse_mode=ParseMode.HTML
             )
             return
 
-
-        value = self.sanitize_digit(context.args, 1, last_ep_number)
+        value, subletter = self.sanitize_digit_and_subletter(context.args, 1, last_ep_number)
 
         if value != -1:
 
-            msg = self.episode_handler.get_episode(value)
+            msg = self.episode_handler.get_episode(value, subletter)
 
             update.effective_message.reply_text(
-                msg, disable_web_page_preview=True
+                msg, disable_web_page_preview=True, parse_mode=ParseMode.HTML
             )
 
     @check_effective_message
@@ -257,17 +279,14 @@ class FacadeBot:
         if not is_admin:
             self.call_counter.add_call()
 
-        last_ep_number: int = self.episode_handler.get_last_episode_number()
-
         if random.random() <= 0.016:
             msg = "Fortuna! Hai pescato un raro episodio non numerato!\n"
             msg += self.episode_handler.get_not_numbered_episode()
         else:
-            rand_ep = random.randint(1, last_ep_number)
-            msg = self.episode_handler.get_episode(rand_ep)
+            msg = self.episode_handler.get_random_episode()
 
         update.effective_message.reply_text(
-            msg, disable_web_page_preview=True
+            msg, disable_web_page_preview=True, parse_mode=ParseMode.HTML
         )
 
     @check_effective_message

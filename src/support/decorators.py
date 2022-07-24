@@ -1,3 +1,7 @@
+import json
+import os
+import traceback
+
 from telegram import Update, Bot, ParseMode, ChatAction
 from telegram.ext import CallbackContext
 from typing import Callable
@@ -63,27 +67,3 @@ def restricted(func):
             logger.info("User is None, can't identify user, access denied")
 
     return wrapped
-
-def cache_counter_decorator(cls):
-    @wraps(cls)
-    def wrapper_cache_counter_decorator():
-        # Do something before
-        try:
-            with open(CACHE_COUNTER_FILEPATH, "r") as cachefile:
-                cache = json.load(cachefile)
-            logger.info("Cache HIT")
-            instance = cls(cache)
-        except (IOError, ValueError):
-            logger.info("Cache MISS")
-            traceback.print_exc()
-            instance = cls()
-
-        # Do something after
-
-        if not os.path.exists(CACHE_FILEPATH):
-            with open(CACHE_FILEPATH, "w") as cachefile:
-                json.dump(instance.counter, cachefile)
-
-        return instance
-
-    return wrapper_cache_decorator    

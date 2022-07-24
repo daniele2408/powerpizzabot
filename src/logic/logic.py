@@ -25,6 +25,7 @@ logger = logging.getLogger('logic.logic')
 
 TopicSnippet = Tuple[str, EpisodeTopic, int, str, str, int]
 
+
 class SearchEngine:
 
     IT_STOP_WORDS: Set[int] = set(get_stop_words('it'))
@@ -131,11 +132,10 @@ class EpisodeHandler:
         return datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S").strftime("%d/%m/%Y")
 
     @staticmethod
-    def format_episode_title_line(site_url: str, title: str) -> str:
+    def format_episode_title_line(site_url: str, title: str, ep_num: int, ep_subnum: str) -> str:
         try:
             pre_colons, post_colons = title.split(":", 1)
-            number_ep = re.findall("[0-9]+", pre_colons)
-            return f"Episodio {number_ep[0]}: <a href='{site_url}'>{post_colons}</a>"
+            return f"Episodio {ep_num}{ep_subnum}: <a href='{site_url}'>{post_colons}</a>"
         except Exception as e:
             traceback.print_exc()
             logger.error(e)
@@ -169,7 +169,7 @@ class EpisodeHandler:
             topic_url = tuple_[4]
             topic_label = tuple_[1].label if topic_url != "@PowerPizzaSearchBot" else tuple_[1].label + " <i>(hey, that's me!)</i>"
             max_score = tuple_[5]
-            episode_line = self.format_episode_title_line(ep.site_url, ep.title)
+            episode_line = self.format_episode_title_line(ep.site_url, ep.title, ep.number, ep.sub_number)
             date = self.convert_to_italian_date_format(ep.published_at)
             message += TextRepo.MSG_RESPONSE.format(
                 i, score, topic_url, topic_label, episode_line, date
@@ -225,13 +225,25 @@ class EpisodeHandler:
         return last_ep.number
 
     def format_single_episode(self, ep: Episode) -> str:
-        msg = f"Episodio {ep.number}: {ep.title_str} ({self.convert_to_italian_date_format(ep.published_at)})\n\n"
+        title_message = f"Episodio {ep.number}{ep.sub_number}: {ep.title_str}"
+        title_message_link = f"<a href='{ep.site_url}'>{title_message}</a>"
+        msg = title_message_link + f" ({self.convert_to_italian_date_format(ep.published_at)})\n\n"
         msg_description = f"{ep.description_raw}\n--------------------------------\n"
 
         return msg + msg_description
 
-    def get_episode(self, number_ep: int) -> str:
-        return self.format_single_episode(self.show.get_episode_by_number(number_ep))
+    def get_episode(self, number_ep: int, subletter: str) -> str:
+        episode = self.show.get_episode_by_number(number_ep, subletter)
+        if episode is None:
+            raise ValueNotValid(TextRepo.MSG_EPISODE_NOT_FOUND.format(number_ep, subletter))
+        return self.format_single_episode(episode)
+
+    def get_random_episode(self) -> str:
+        episode = self.show.get_random_episode()
+        if episode is None:
+            raise Exception("Episodes list must be empty")
+        return self.format_single_episode(episode)
+
 
     def get_not_numbered_episode(self) -> str:
         episodes = self.show.get_not_numbered_episodes()

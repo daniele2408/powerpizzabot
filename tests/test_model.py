@@ -1,5 +1,7 @@
 import os
 import sys
+from typing import Dict
+
 os.environ["PPB_ENV"] = "unittest"
 myPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, myPath + '/../src/')
@@ -8,6 +10,7 @@ from configuration_test import PROCD_EP_FILEPATH, SRC_TEST_FOLDER
 import pytest
 import json
 from hashlib import sha1
+
 
 ############## fixtures ##############
 
@@ -26,12 +29,14 @@ def episode_procd():
 
     return episode
 
+
 @pytest.fixture
 def raw_ep():
     with open(RAW_EP_FILEPATH, 'r') as f:
         raw_ep = json.load(f)
 
     return raw_ep
+
 
 @pytest.fixture(autouse=True)
 def run_before():
@@ -43,17 +48,17 @@ def run_before():
     SearchConfigs.set_user_cfg(2, 30, 'm')
     SearchConfigs.set_user_cfg(3, 3, 'n')
     SearchConfigs.set_user_cfg(3, 90, 'm')
-    
+
     yield
     SearchConfigs.reset_user_data()
     filelist = [f for f in os.listdir(SearchConfigs.DUMP_FOLDER)]
     for f in filelist:
         os.remove(os.path.join(SearchConfigs.DUMP_FOLDER, f))
 
+
 ############## Episode ##############
 
 def test_to_dict(episode_procd):
-
     dict_ = episode_procd.to_dict()
 
     assert isinstance(dict_, dict)
@@ -67,8 +72,8 @@ def test_to_dict(episode_procd):
         assert topic_ep.label == topic_dict['label']
         assert topic_ep.url == topic_dict['url']
 
-def test_from_dict(episode_procd):
 
+def test_from_dict(episode_procd):
     dict_ = episode_procd.to_dict()
 
     ep_from_dict = Episode.from_dict(dict_)
@@ -80,8 +85,8 @@ def test_from_dict(episode_procd):
     assert episode_procd.site_url == ep_from_dict.site_url
     assert episode_procd.description_raw == ep_from_dict.description_raw
 
-def test_populate_topic(episode_procd):
 
+def test_populate_topic(episode_procd):
     episode_procd.topics = list()
 
     episode_procd.populate_topics()
@@ -89,12 +94,12 @@ def test_populate_topic(episode_procd):
     assert len(episode_procd.topics) == 14
     assert episode_procd.topics[0].label == 'A Babbo Morto - Zerocalcare'
     assert episode_procd.topics[4].url == 'https://www.youtube.com/watch?v=Vt7u4SSXU5o'
-    
+
     assert all(isinstance(topic.label, str) for topic in episode_procd.topics)
     assert all(isinstance(topic.url, str) for topic in episode_procd.topics)
-    
-def test_populate_topic_wrong_description(episode_procd):
 
+
+def test_populate_topic_wrong_description(episode_procd):
     episode_procd.topics = list()
     episode_procd.description_raw = 'not a formally correct description'
 
@@ -102,10 +107,10 @@ def test_populate_topic_wrong_description(episode_procd):
 
     assert not len(episode_procd.topics)
 
+
 ############## SearchConfig ##############
 
 def test_get_user_cfg():
-
     assert isinstance(SearchConfigs.get_user_cfg(1), UserConfig)
     assert isinstance(SearchConfigs.get_user_cfg(2), UserConfig)
     assert isinstance(SearchConfigs.get_user_cfg(3), UserConfig)
@@ -114,20 +119,20 @@ def test_get_user_cfg():
     assert SearchConfigs.get_user_cfg(2).n == 10
     assert SearchConfigs.get_user_cfg(3).n == 3
 
-def test_get_user_show_first_n():
 
+def test_get_user_show_first_n():
     assert SearchConfigs.get_user_show_first_n(1) == 5
     assert SearchConfigs.get_user_show_first_n(2) == 10
     assert SearchConfigs.get_user_show_first_n(3) == 3
 
-def test_get_user_show_min_threshold():
 
+def test_get_user_show_min_threshold():
     assert SearchConfigs.get_user_show_min_threshold(1) == 1
     assert SearchConfigs.get_user_show_min_threshold(2) == 30
     assert SearchConfigs.get_user_show_min_threshold(3) == 90
 
-def test_chek_if_same_value():
 
+def test_chek_if_same_value():
     assert SearchConfigs.check_if_same_value(1, 5, 'n')
     assert SearchConfigs.check_if_same_value(1, 1, 'm')
     assert not SearchConfigs.check_if_same_value(1, 999, 'n')
@@ -136,7 +141,7 @@ def test_chek_if_same_value():
     assert SearchConfigs.check_if_same_value(2, 10, 'n')
     assert SearchConfigs.check_if_same_value(2, 30, 'm')
     assert not SearchConfigs.check_if_same_value(2, 999, 'n')
-    assert not SearchConfigs.check_if_same_value(2, 999, 'm')    
+    assert not SearchConfigs.check_if_same_value(2, 999, 'm')
 
     assert SearchConfigs.check_if_same_value(3, 3, 'n')
     assert SearchConfigs.check_if_same_value(3, 90, 'm')
@@ -146,8 +151,8 @@ def test_chek_if_same_value():
     with pytest.raises(ValueError):
         SearchConfigs.check_if_same_value(1, 5, 'w')
 
-def test_set_user_cfg():
 
+def test_set_user_cfg():
     SearchConfigs.set_user_cfg(1, 999, 'n')
     SearchConfigs.set_user_cfg(1, 99, 'm')
 
@@ -157,8 +162,8 @@ def test_set_user_cfg():
     with pytest.raises(ValueError):
         SearchConfigs.set_user_cfg(1, 999, 'w')
 
-def test_normalize_user_data():
 
+def test_normalize_user_data():
     data = SearchConfigs.normalize_user_data()
 
     one_hashed = sha1(bytes(1)).hexdigest()
@@ -174,8 +179,8 @@ def test_normalize_user_data():
     assert data[three_hashed]['n'] == SearchConfigs.get_user_show_first_n(3)
     assert data[three_hashed]['m'] == SearchConfigs.get_user_show_min_threshold(3)
 
-def test_dump_data():
 
+def test_dump_data():
     one_hashed = sha1(bytes(1)).hexdigest()
     two_hashed = sha1(bytes(2)).hexdigest()
 
@@ -206,3 +211,35 @@ def test_dump_data():
 
     assert SearchConfigs.get_user_show_first_n(2) == 30
     assert SearchConfigs.get_user_show_min_threshold(2) == 40
+
+
+def create_episode_given_title(title: str) -> Episode:
+    return Episode(**{
+        "episode_id": '1234',
+        "title": title,
+        "published_at": '2022-07-15 08:00:03',
+        "site_url": "www.www.com",
+        "description_raw": "some stuff"
+    })
+
+
+def test_episode():
+    episode = create_episode_given_title('199c: fdsdfs')
+    assert 199 == episode.number
+    assert 'c' == episode.sub_number
+
+    episode = create_episode_given_title('ep.199: fdsfsd')
+    assert 199 == episode.number
+    assert '' == episode.sub_number
+
+    episode = create_episode_given_title('ep.199:201 fdsfsd 201')
+    assert 199 == episode.number
+    assert '' == episode.sub_number
+
+    episode = create_episode_given_title('199:201 fdsfsd 201')
+    assert 199 == episode.number
+    assert '' == episode.sub_number
+
+    episode = create_episode_given_title('199c201:fdsfsd 201')
+    assert 199 == episode.number
+    assert '' == episode.sub_number

@@ -1,5 +1,6 @@
 import os
 import json
+import random
 from collections import defaultdict, Counter
 import traceback
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
@@ -39,6 +40,7 @@ class Episode:
         self.description_raw = description_raw.replace('Lorro Sio', 'Lorro, Sio')
         self.topics: List[EpisodeTopic] = []
         self.number: int = self.parse_ep_number()
+        self.sub_number: str = self.parse_sub_number()
         self.title_str: str = self.parse_ep_title()
         self.hosts: List[str] = self.parse_hosts()
 
@@ -50,7 +52,7 @@ class Episode:
             "site_url": self.site_url,
             "description_raw": self.description_raw,
             "topics": [
-                {"label":topic.label, "url":topic.url} for topic in self.topics
+                {"label": topic.label, "url": topic.url} for topic in self.topics
             ]
         }
 
@@ -89,14 +91,25 @@ class Episode:
 
     def parse_ep_number(self) -> int:
         title_no_blanks = re.sub('[ ]+', '', self.title)
-        match_regex = re.match('^(ep.[0-9]+:|[0-9]+:)', title_no_blanks)
-        if match_regex:
-            parsed_match = match_regex.group(0)
-            parsed_match = re.search('[0-9]+', parsed_match).group(0)
-            parsed_match = parsed_match.replace('.ep', '')
+        # match_regex = re.match('^(ep.[0-9]+:|[0-9]+:)', title_no_blanks)
+        match_regex = re.findall('[0-9]+', title_no_blanks)
+        if len(match_regex):
+            parsed_match = match_regex[0]
+            # parsed_match = re.search('[0-9]+', parsed_match).group(0)
+            # parsed_match = parsed_match.replace('.ep', '')
             return int(parsed_match)
         else:
             return -1
+
+    def parse_sub_number(self) -> str:
+        title_no_blanks = re.sub('[ ]+', '', self.title)
+        match = re.match('[0-9]*[a-z]:', title_no_blanks)
+        if match:
+            parsed_match = match.group(0)
+            sub_number = re.search('[a-z]', parsed_match).group(0)
+            return sub_number
+        else:
+            return ''
 
     def parse_ep_title(self) -> str:
         return self.title.split(':')[-1]
@@ -158,8 +171,14 @@ class Show:
     def get_last_episode(self) -> Episode:
         return self._episodes[max(self._episodes.keys())]
 
-    def get_episode_by_number(self, number: int) -> Episode:
-        return next(filter(lambda ep: ep.number == number, self._episodes.values()), None)
+    def get_episode_by_number(self, number: int, subletter: str) -> Episode:
+        return next(
+            filter(lambda ep: ep.number == number and ep.sub_number == subletter, self._episodes.values()),
+            None
+        )
+
+    def get_random_episode(self) -> Episode:
+        return self._episodes[random.choice(list(self._episodes.keys()))]
 
     def get_not_numbered_episodes(self) -> List[Episode]:
         return list(filter(lambda ep: ep.number < 0, self._episodes.values()))
