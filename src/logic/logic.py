@@ -233,9 +233,17 @@ class EpisodeHandler:
         return msg + msg_description
 
     def get_episode(self, number_ep: int, subletter: str) -> str:
-        episode = self.show.get_episode_by_number(number_ep, subletter)
+        episode = self.show.get_episode_by_number_and_subletter(number_ep, subletter)
         if episode is None:
-            raise ValueNotValid(TextRepo.MSG_EPISODE_NOT_FOUND.format(number_ep, subletter))
+            episodes = self.show.get_episodes_by_number(number_ep)
+            if len(episodes) == 0:
+                raise ValueNotValid(TextRepo.MSG_EPISODE_NOT_FOUND.format(number_ep, subletter))
+            else:
+                raise ValueNotValid(TextRepo.MSG_EPISODE_NOT_FOUND_MISSING_SUBLETTER.format(
+                    number_ep,
+                    ", ".join([f'{ep.number}{ep.sub_number}' for ep in episodes])
+                ))
+
         return self.format_single_episode(episode)
 
     def get_random_episode(self) -> str:
@@ -243,7 +251,6 @@ class EpisodeHandler:
         if episode is None:
             raise Exception("Episodes list must be empty")
         return self.format_single_episode(episode)
-
 
     def get_not_numbered_episode(self) -> str:
         episodes = self.show.get_not_numbered_episodes()

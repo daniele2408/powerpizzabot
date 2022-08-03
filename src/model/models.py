@@ -169,13 +169,16 @@ class Show:
         return set(self._episodes.keys())
 
     def get_last_episode(self) -> Episode:
-        return self._episodes[max(self._episodes.keys())]
+        return max([ep for ep in self._episodes.values() if ep.number > 0], key=lambda x: x.number)
 
-    def get_episode_by_number(self, number: int, subletter: str) -> Episode:
+    def get_episode_by_number_and_subletter(self, number: int, subletter: str) -> Episode:
         return next(
             filter(lambda ep: ep.number == number and ep.sub_number == subletter, self._episodes.values()),
             None
         )
+
+    def get_episodes_by_number(self, number: int) -> List[Episode]:
+        return [ep for ep in self._episodes.values() if ep.number == number]
 
     def get_random_episode(self) -> Episode:
         return self._episodes[random.choice(list(self._episodes.keys()))]

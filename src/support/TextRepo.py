@@ -16,6 +16,8 @@ Data: {}
     MSG_NOT_VALID_INPUT = "Il valore inviato non ha un formato corretto, inserire un numero intero appartenente " \
                           "all'intervallo previsto, eventualmente seguito da una lettera minuscola non accentata."
     MSG_EPISODE_NOT_FOUND = "Non esiste l'episodio numero {}{}!"
+    MSG_EPISODE_NOT_FOUND_MISSING_SUBLETTER = "Esistono episodi con numero {}, ma devi specificare la lettera!" \
+                                              " Scegli tra {}"
     MSG_SEARCH_EMPTY_INPUT = "Hai inviato il comando senza nessuna parola da ricercare!"
     MSG_TOP_EMPTY_INPUT = "Hai inviato il comando senza nessun numero da impostare!"
     MSG_NOT_VALID_DATE = "Le date immesse non hanno formato corretto - inserire DDMMYY oppure DDMMYY DDMMYY"
