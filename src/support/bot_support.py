@@ -238,7 +238,8 @@ class FacadeBot:
         msg_last_ep = self.episode_handler.get_last_episode()
 
         update.effective_message.reply_text(
-            msg_last_ep, disable_web_page_preview=True, parse_mode=ParseMode.HTML
+            msg_last_ep,
+            disable_web_page_preview=True, parse_mode=ParseMode.HTML
         )
 
     @check_effective_message

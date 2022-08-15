@@ -230,7 +230,7 @@ class EpisodeHandler:
         msg = title_message_link + f" ({self.convert_to_italian_date_format(ep.published_at)})\n\n"
         msg_description = f"{ep.description_raw}\n--------------------------------\n"
 
-        return msg + msg_description
+        return msg + msg_description.replace('>', '&gt;').replace('<', '&lt;')
 
     def get_episode(self, number_ep: int, subletter: str) -> str:
         episode = self.show.get_episode_by_number_and_subletter(number_ep, subletter)
