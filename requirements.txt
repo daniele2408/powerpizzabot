@@ -1,11 +1,11 @@
 APScheduler==3.6.3
 attrs==20.3.0
 beautifulsoup4==4.9.3
-certifi==2020.12.5
+certifi==2022.12.07
 cffi==1.14.4
 chardet==3.0.4
 coverage==5.3.1
-cryptography==3.2.1
+cryptography==3.3.2
 decorator==4.4.2
 fuzzywuzzy==0.18.0
 idna==2.10
@@ -35,5 +35,5 @@ typed-ast==1.4.1
 typing-extensions==3.7.4.3
 tzlocal==2.1
 Unidecode==1.1.1
-urllib3==1.26.2
+urllib3==1.26.4
 zipp==3.4.0
